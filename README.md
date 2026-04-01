@@ -42,7 +42,8 @@ Label Studio lets you:
 label-studio/
 ├── artifacts/
 │   ├── api-server/          # Express 5 API server (@workspace/api-server)
-│   └── label-studio/        # React + Vite frontend (@workspace/label-studio)
+│   ├── label-studio/        # React + Vite frontend (@workspace/label-studio)
+│   └── mockup-sandbox/      # Vite component preview server for canvas prototyping (@workspace/mockup-sandbox)
 ├── lib/
 │   ├── api-spec/            # OpenAPI spec + Orval config (@workspace/api-spec)
 │   ├── api-client-react/    # Generated TanStack Query hooks (@workspace/api-client-react)
@@ -52,7 +53,7 @@ label-studio/
 │   └── src/seed.ts          # Database seed script (@workspace/scripts)
 ├── docs/                    # Project documentation
 ├── pnpm-workspace.yaml
-├── tsconfig.base.json       # Shared TS config (strict-leaning flags; lib/* packages add composite: true)
+├── tsconfig.base.json       # Shared TS config (strict-leaning individual flags, no strict umbrella)
 └── package.json             # Root scripts
 ```
 
