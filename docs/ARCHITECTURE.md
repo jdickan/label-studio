@@ -23,11 +23,11 @@ All packages extend `tsconfig.base.json` with `composite: true`. TypeScript proj
 
 Replit routes incoming requests by path prefix. Each artifact registers a `previewPath`:
 
-| Artifact | Preview path | Port env var |
+| Artifact | Preview path | Local port |
 |---|---|---|
-| `api-server` | `/api-server` (internal) | `PORT` (8080 default) |
-| `label-studio` | `/` (root) | `PORT` |
-| `mockup-sandbox` | `/__mockup` | `PORT` |
+| `api-server` | `/api` | 8080 |
+| `label-studio` | `/` (root) | 23804 |
+| `mockup-sandbox` | `/__mockup` | 8081 |
 
 The frontend Vite dev server proxies `/api/*` requests to the API server. In production, Replit's routing handles the same via `artifact.toml`.
 
@@ -218,9 +218,9 @@ The PDF template upload flow uses Server-Sent Events to stream real-time analysi
 
 1. `POST /api/label-sheets/upload-pdf` — multer accepts one or more PDF files into memory as a single batch. One UUID `jobId` is assigned for the whole batch. Returns `{ jobId, fileCount, filenames[] }`.
 2. Frontend opens **one** `EventSource` to `GET /api/label-sheets/analyze/:jobId/events` for the batch.
-3. The server processes each file sequentially. Each SSE event includes a `filename` field so the frontend can route progress to the correct file's checklist panel. The 12 steps run per-file:
+3. The server processes each file sequentially. Each SSE event includes `file` (original filename string) and `fileIndex` (0-based integer) so the frontend can route progress to the correct file's checklist panel. The 12 steps run per-file:
    ```
-   data: {"filename":"OL5225.pdf","step":1,"label":"PDF Format Validation","status":"done","detail":"..."}
+   data: {"type":"step","file":"OL5225.pdf","fileIndex":0,"stepIndex":0,"stepLabel":"PDF Format Validation","status":"pass","detail":"..."}
    ```
 4. On completion of each file, a final event includes the extracted measurements for that file.
 5. After all files complete, the frontend closes the `EventSource`; the review modal shows a diff-editable form with extracted values for each file.
@@ -232,19 +232,21 @@ SSE state is held in a `Map<string, Job>` in-process (each `Job` has a `FileResu
 
 ## PDF Generation (Download PDF)
 
-`GET /api/label-sheets/:id/pdf` uses **pdf-lib** to build a two-layer PDF:
+`GET /api/label-sheets/:id/pdf` generates a two-layer PDF via **manual low-level PDF object assembly** — no third-party library. The generator in `labelSheets.ts` builds raw PDF objects as strings, tracks cross-reference byte offsets, and writes the `xref` table and trailer block directly.
+
+The output PDF (`%PDF-1.6`) has two Optional Content Groups (OCGs):
 
 - **OCG "Label Borders"** (black, in print set) — stroked rectangles or rounded-rectangle Bezier paths tracing each label's die-cut outline.
-- **OCG "Guides"** (cyan, excluded from print via `AS` event) — margin lines, safe-area insets, bleed marks.
+- **OCG "Guides"** (cyan, excluded from print via the `AS` event dictionary) — margin lines, safe-area insets, bleed marks.
 
-The Bezier path construction mirrors the extraction logic in `pdfAnalysis.ts`: corner radius → quarter-circle cubic approximation using the constant `k = 0.552284749`.
+For sheets with a `corner_radius`, each label is drawn as a rounded-rectangle Bezier path using the cubic approximation constant `k = 0.552284749` (standard quarter-circle cubic). This mirrors the Bezier extraction logic used in `pdfAnalysis.ts` to reverse-engineer corner radii from uploaded PDFs.
 
 ---
 
 ## Key Design Decisions
 
-**Why pdf-lib instead of Puppeteer/html2canvas?**
-pdf-lib generates pure vector PDFs with no headless browser overhead. Label measurements are already in physical inches, making it straightforward to place paths precisely without pixel-to-point conversions or screenshot artifacts.
+**Why manual PDF assembly instead of a library (pdf-lib / Puppeteer)?**
+The template PDF only needs to draw rectangles and Bezier paths at precise physical coordinates — there is no text, no images, and no layout engine required. A hand-written PDF object emitter (< 200 lines) handles this more reliably than pulling in a large dependency. Label measurements are already in physical inches, making point-to-unit conversion trivial without library overhead or screenshot artifacts.
 
 **Why a single-row `design_system` table?**
 Brand settings are effectively a global config object. A singleton table (always `id = 1`) avoids the complexity of user accounts or multi-tenant data while keeping the data queryable and patchable via the standard REST pattern. The GET endpoint seeds defaults if the row is missing.

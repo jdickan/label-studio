@@ -29,7 +29,7 @@ Label Studio lets you:
 | API contract | OpenAPI 3.1 → Orval codegen |
 | Frontend | React 19 + Vite + Tailwind CSS + shadcn/ui + wouter |
 | State / data fetching | TanStack Query v5 |
-| PDF generation | pdf-lib |
+| PDF generation | Manual low-level PDF assembly (raw objects + xref; no library) |
 | File uploads | multer (memory storage) |
 | Streaming | Server-Sent Events (SSE) for real-time analysis progress |
 | Platform | Replit |
