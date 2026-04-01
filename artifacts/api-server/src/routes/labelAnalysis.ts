@@ -23,13 +23,23 @@ const ZONE_ROLES = [
 
 const ALLOWED_MIME = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
 
-const ANALYZE_PROMPT = `You are a label design analysis assistant for a scented products business (candles, room sprays, diffusers).
+const ANALYZE_PROMPT = `You are a label design analysis assistant specializing in scented products (soy candles, room sprays, reed diffusers).
 
-Analyze the provided label image and identify all distinct content zones. Return ONLY a valid JSON array of zone objects.
+Analyze the provided label image and identify all distinct content zones. These labels typically follow a structured layout like this reference design:
 
-Each zone must have this exact structure:
+Reference zone structure for a scented product label (approximate, adjust to what you actually see):
+- brand-name: top-left area (x≈0.03, y≈0.03, w≈0.45, h≈0.12) — the company/brand name in small caps
+- product-name: prominent center-left (x≈0.03, y≈0.18, w≈0.45, h≈0.30) — the scent/product name, largest text
+- scent-notes: below product-name (x≈0.03, y≈0.52, w≈0.45, h≈0.14) — fragrance notes like "top: bergamot, base: sandalwood"
+- product-type: narrow strip (x≈0.03, y≈0.68, w≈0.40, h≈0.08) — e.g. "Soy Candle" or "Room Spray"
+- weight-volume: bottom-left (x≈0.03, y≈0.78, w≈0.35, h≈0.08) — e.g. "8 oz / 226g"
+- photo-area: right half (x≈0.52, y≈0.0, w≈0.48, h≈1.0) — photo or illustration region
+- website: bottom strip — brand URL
+- address: small text near bottom — brand address
+
+Return ONLY a valid JSON array of zone objects. Each object must have this exact shape:
 {
-  "role": string (one of the roles below),
+  "role": string (one of the roles listed below),
   "text": string (the exact text visible in this zone, or "" for image/decorative zones),
   "x": number (left edge as 0-1 fraction of label width),
   "y": number (top edge as 0-1 fraction of label height),
@@ -42,7 +52,7 @@ Each zone must have this exact structure:
 
 Allowed role values:
 - "brand-name": the brand/company name
-- "product-name": the product or scent name (usually largest text)
+- "product-name": the product or scent name (usually largest text) — REQUIRED, always identify this zone
 - "scent-notes": fragrance notes / scent description
 - "product-type": product category (e.g. "Soy Candle", "Room Spray")
 - "weight-volume": weight or volume text (e.g. "8 oz", "4 fl oz")
@@ -50,17 +60,15 @@ Allowed role values:
 - "website": website URL
 - "disclaimer": safety warnings or legal text
 - "date": batch date or best-by date
-- "photo-area": a photograph or illustration area (no text)
-- "logo-area": brand logo image area
+- "photo-area": a photograph or illustration area (no text content)
+- "logo-area": brand logo image area (no text content)
 - "decorative-bar": decorative stripe, border, or divider element
 
 Rules:
-- Identify ALL distinct zones you can see (typically 5-10 zones for a label)
-- x, y, w, h MUST be 0.0 to 1.0 fractions (0=left/top edge, 1=right/bottom edge)
-- For a zone spanning the full width: x=0, w=1.0
-- Estimate positions carefully — the label's top-left corner is (0,0), bottom-right is (1,1)
-- If text is rotated vertically (like a side address strip), still capture its bounding box
-- The "photo-area" is typically the right portion of candle labels
+- Identify ALL distinct zones visible (typically 5-10 zones per label)
+- x, y, w, h MUST be 0.0–1.0 fractions (label top-left = 0,0; bottom-right = 1,1)
+- Always include a "product-name" zone — it is required even if the text is small
+- If text is rotated vertically, still capture its bounding box normally
 - Return ONLY the JSON array, no markdown, no explanation, no code fences`;
 
 function maxChars(zone: Omit<Zone, "maxChars">): number {
@@ -134,8 +142,8 @@ router.post("/analyze", upload.single("image"), async (req, res) => {
       base64 = converted.base64;
       mimeType = converted.mimeType;
     } catch (err: unknown) {
-      req.log.warn({ err }, "PDF conversion failed — returning empty scaffold for manual zone design");
-      res.json({ zones: [], brandMatches: {} });
+      req.log.warn({ err }, "PDF conversion failed — returning default scaffold for manual zone editing");
+      res.json({ zones: buildDefaultScaffold(), brandMatches: {} });
       return;
     }
   } else {
@@ -205,8 +213,8 @@ router.post("/analyze", upload.single("image"), async (req, res) => {
     }
 
   } catch (err: unknown) {
-    req.log.warn({ err }, "LLM analysis failed — returning empty scaffold for manual zone design");
-    zones = [];
+    req.log.warn({ err }, "LLM analysis failed — returning default scaffold with empty zones for manual editing");
+    zones = buildDefaultScaffold();
   }
 
   res.json({ zones, brandMatches });
