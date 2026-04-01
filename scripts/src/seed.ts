@@ -172,7 +172,7 @@ async function seed() {
 
   console.log(`Seeded ${sheets.length} label sheets`);
 
-  // Seed design system (singleton — only create if not present)
+  // Seed design system (upsert — always ensure brand font defaults are current)
   const existing = await db.select().from(designSystemTable).limit(1);
   if (existing.length === 0) {
     await db.insert(designSystemTable).values({
@@ -181,14 +181,28 @@ async function seed() {
       accentColor: "#c4956a",
       backgroundColor: "#faf8f5",
       textColor: "#2d2926",
-      headingFont: "Georgia",
-      bodyFont: "Inter",
+      headingFont: "Heinberg Textured",
+      bodyFont: "Jost",
       brandName: "Bloom & Ember",
       tagline: "Small-batch scented goods, handcrafted with care",
       address: "Portland, OR",
       websiteUrl: "www.bloomandember.com",
     });
     console.log("Seeded design system");
+  } else {
+    // Update fonts if they still have stale placeholder values
+    const row = existing[0];
+    if (row.headingFont === "Georgia" || row.bodyFont === "Inter") {
+      await db.update(designSystemTable)
+        .set({
+          headingFont: row.headingFont === "Georgia" ? "Heinberg Textured" : row.headingFont,
+          bodyFont: row.bodyFont === "Inter" ? "Jost" : row.bodyFont,
+          updatedAt: new Date(),
+        });
+      console.log("Updated design system fonts to built-in brand defaults");
+    } else {
+      console.log("Design system already exists — skipping");
+    }
   }
 
   // Seed sample products (only if none exist)

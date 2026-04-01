@@ -10,11 +10,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Save, UploadCloud, Type, X } from "lucide-react";
+import { Save, UploadCloud, Type, X, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
 const KERN_PAIRS = ["AV", "AW", "LT", "TA"];
+
+const BUILTIN_FONTS: Record<"heading" | "body", string> = {
+  heading: "Heinberg Textured",
+  body: "Jost",
+};
 
 function KerningSpecimen() {
   return (
@@ -77,6 +82,9 @@ function FontUploadCard({
   const inputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
+  const builtinFamily = BUILTIN_FONTS[slot];
+  const isBuiltin = !loadedFont && currentFamily.trim().toLowerCase() === builtinFamily.toLowerCase();
+
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -108,7 +116,7 @@ function FontUploadCard({
 
   const handleClear = () => {
     setLoadedFont(null);
-    onFontLoaded("");
+    onFontLoaded(builtinFamily);
   };
 
   return (
@@ -127,9 +135,9 @@ function FontUploadCard({
           variant="outline"
           className="shrink-0"
           onClick={() => inputRef.current?.click()}
-          title="Upload font file"
+          title={isBuiltin ? "Override built-in font with a custom upload" : "Upload font file"}
         >
-          <UploadCloud className="w-4 h-4 mr-2" /> Upload
+          <UploadCloud className="w-4 h-4 mr-2" /> {isBuiltin ? "Override" : "Upload"}
         </Button>
         <input
           ref={inputRef}
@@ -139,11 +147,20 @@ function FontUploadCard({
           onChange={handleFile}
         />
         {loadedFont && (
-          <Button type="button" variant="ghost" size="icon" onClick={handleClear} title="Remove uploaded font">
+          <Button type="button" variant="ghost" size="icon" onClick={handleClear} title="Remove override — restore built-in font">
             <X className="w-4 h-4" />
           </Button>
         )}
       </div>
+      {isBuiltin && (
+        <div className="flex items-center gap-2">
+          <Badge variant="secondary" className="gap-1.5 text-xs bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800">
+            <Sparkles className="w-3 h-3" />
+            Built-in
+          </Badge>
+          <span className="text-xs text-muted-foreground">Loaded from app fonts — always available</span>
+        </div>
+      )}
       {loadedFont && (
         <div className="flex items-center gap-2">
           <Badge variant="secondary" className="gap-1.5 text-xs">
