@@ -5,13 +5,13 @@
  * Label Studio API specification
  * OpenAPI spec version: 0.1.0
  */
-import type { UpdateLabelTemplateBodyZones } from "./updateLabelTemplateBodyZones";
 
 export interface UpdateLabelTemplateBody {
   name?: string;
   description?: string;
   labelSheetId?: number | null;
-  zones?: UpdateLabelTemplateBodyZones;
+  /** Zone layout — array of zone objects (new format) or named-zone object (legacy format) */
+  zones?: unknown;
   previewNotes?: string;
   safeAreaEnabled?: boolean;
   bleedInches?: number;

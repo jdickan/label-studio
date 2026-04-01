@@ -206,7 +206,11 @@ export const GetLabelTemplatesResponseItem = zod.object({
   name: zod.string(),
   description: zod.string().nullish(),
   labelSheetId: zod.number().nullish(),
-  zones: zod.object({}).passthrough(),
+  zones: zod
+    .unknown()
+    .describe(
+      "Zone layout — array of zone objects (new format) or named-zone object (legacy format)",
+    ),
   previewNotes: zod.string().nullish(),
   safeAreaEnabled: zod.boolean(),
   bleedInches: zod.number(),
@@ -225,7 +229,11 @@ export const CreateLabelTemplateBody = zod.object({
   name: zod.string(),
   description: zod.string().optional(),
   labelSheetId: zod.number().optional(),
-  zones: zod.object({}).passthrough(),
+  zones: zod
+    .unknown()
+    .describe(
+      "Zone layout — array of zone objects (new format) or named-zone object (legacy format)",
+    ),
   previewNotes: zod.string().optional(),
   safeAreaEnabled: zod.boolean().optional(),
   bleedInches: zod.number().optional(),
@@ -244,7 +252,11 @@ export const GetLabelTemplateResponse = zod.object({
   name: zod.string(),
   description: zod.string().nullish(),
   labelSheetId: zod.number().nullish(),
-  zones: zod.object({}).passthrough(),
+  zones: zod
+    .unknown()
+    .describe(
+      "Zone layout — array of zone objects (new format) or named-zone object (legacy format)",
+    ),
   previewNotes: zod.string().nullish(),
   safeAreaEnabled: zod.boolean(),
   bleedInches: zod.number(),
@@ -264,7 +276,12 @@ export const UpdateLabelTemplateBody = zod.object({
   name: zod.string().optional(),
   description: zod.string().optional(),
   labelSheetId: zod.number().nullish(),
-  zones: zod.object({}).passthrough().optional(),
+  zones: zod
+    .unknown()
+    .optional()
+    .describe(
+      "Zone layout — array of zone objects (new format) or named-zone object (legacy format)",
+    ),
   previewNotes: zod.string().optional(),
   safeAreaEnabled: zod.boolean().optional(),
   bleedInches: zod.number().optional(),
@@ -276,7 +293,11 @@ export const UpdateLabelTemplateResponse = zod.object({
   name: zod.string(),
   description: zod.string().nullish(),
   labelSheetId: zod.number().nullish(),
-  zones: zod.object({}).passthrough(),
+  zones: zod
+    .unknown()
+    .describe(
+      "Zone layout — array of zone objects (new format) or named-zone object (legacy format)",
+    ),
   previewNotes: zod.string().nullish(),
   safeAreaEnabled: zod.boolean(),
   bleedInches: zod.number(),
@@ -495,7 +516,6 @@ export const GetPrintJobsResponseItem = zod.object({
   name: zod.string(),
   labelSheetId: zod.number(),
   labelSheetName: zod.string(),
-  labelSheetBrand: zod.string(),
   labelSheetCode: zod.string(),
   labelsPerSheet: zod.number(),
   items: zod.array(
@@ -511,8 +531,6 @@ export const GetPrintJobsResponseItem = zod.object({
   totalLabels: zod.number(),
   totalSheets: zod.number(),
   status: zod.enum(["draft", "ready", "printed"]),
-  jobType: zod.enum(["standard", "reprint"]),
-  blankSlots: zod.array(zod.number()),
   notes: zod.string().nullish(),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
@@ -531,8 +549,6 @@ export const CreatePrintJobBody = zod.object({
       quantity: zod.number(),
     }),
   ),
-  jobType: zod.enum(["standard", "reprint"]).optional(),
-  blankSlots: zod.array(zod.number()).optional(),
   notes: zod.string().optional(),
 });
 
@@ -548,7 +564,6 @@ export const GetPrintJobResponse = zod.object({
   name: zod.string(),
   labelSheetId: zod.number(),
   labelSheetName: zod.string(),
-  labelSheetBrand: zod.string(),
   labelSheetCode: zod.string(),
   labelsPerSheet: zod.number(),
   items: zod.array(
@@ -564,8 +579,6 @@ export const GetPrintJobResponse = zod.object({
   totalLabels: zod.number(),
   totalSheets: zod.number(),
   status: zod.enum(["draft", "ready", "printed"]),
-  jobType: zod.enum(["standard", "reprint"]),
-  blankSlots: zod.array(zod.number()),
   notes: zod.string().nullish(),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
@@ -589,8 +602,6 @@ export const UpdatePrintJobBody = zod.object({
       }),
     )
     .optional(),
-  jobType: zod.enum(["standard", "reprint"]).optional(),
-  blankSlots: zod.array(zod.number()).optional(),
   notes: zod.string().optional(),
   status: zod.enum(["draft", "ready", "printed"]).optional(),
 });
@@ -600,7 +611,6 @@ export const UpdatePrintJobResponse = zod.object({
   name: zod.string(),
   labelSheetId: zod.number(),
   labelSheetName: zod.string(),
-  labelSheetBrand: zod.string(),
   labelSheetCode: zod.string(),
   labelsPerSheet: zod.number(),
   items: zod.array(
@@ -616,8 +626,6 @@ export const UpdatePrintJobResponse = zod.object({
   totalLabels: zod.number(),
   totalSheets: zod.number(),
   status: zod.enum(["draft", "ready", "printed"]),
-  jobType: zod.enum(["standard", "reprint"]),
-  blankSlots: zod.array(zod.number()),
   notes: zod.string().nullish(),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
@@ -651,7 +659,6 @@ export const GetRecentPrintJobsResponseItem = zod.object({
   name: zod.string(),
   labelSheetId: zod.number(),
   labelSheetName: zod.string(),
-  labelSheetBrand: zod.string(),
   labelSheetCode: zod.string(),
   labelsPerSheet: zod.number(),
   items: zod.array(
@@ -667,8 +674,6 @@ export const GetRecentPrintJobsResponseItem = zod.object({
   totalLabels: zod.number(),
   totalSheets: zod.number(),
   status: zod.enum(["draft", "ready", "printed"]),
-  jobType: zod.enum(["standard", "reprint"]),
-  blankSlots: zod.array(zod.number()),
   notes: zod.string().nullish(),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),

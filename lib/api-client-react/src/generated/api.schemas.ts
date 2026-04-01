@@ -113,14 +113,13 @@ export interface UpdateLabelSheetBody {
   safeAreaInches?: number;
 }
 
-export type LabelTemplateZones = { [key: string]: unknown };
-
 export interface LabelTemplate {
   id: number;
   name: string;
   description?: string | null;
   labelSheetId?: number | null;
-  zones: LabelTemplateZones;
+  /** Zone layout — array of zone objects (new format) or named-zone object (legacy format) */
+  zones: unknown;
   previewNotes?: string | null;
   safeAreaEnabled: boolean;
   bleedInches: number;
@@ -129,26 +128,24 @@ export interface LabelTemplate {
   updatedAt: string;
 }
 
-export type CreateLabelTemplateBodyZones = { [key: string]: unknown };
-
 export interface CreateLabelTemplateBody {
   name: string;
   description?: string;
   labelSheetId?: number;
-  zones: CreateLabelTemplateBodyZones;
+  /** Zone layout — array of zone objects (new format) or named-zone object (legacy format) */
+  zones: unknown;
   previewNotes?: string;
   safeAreaEnabled?: boolean;
   bleedInches?: number;
   safeAreaInches?: number;
 }
 
-export type UpdateLabelTemplateBodyZones = { [key: string]: unknown };
-
 export interface UpdateLabelTemplateBody {
   name?: string;
   description?: string;
   labelSheetId?: number | null;
-  zones?: UpdateLabelTemplateBodyZones;
+  /** Zone layout — array of zone objects (new format) or named-zone object (legacy format) */
+  zones?: unknown;
   previewNotes?: string;
   safeAreaEnabled?: boolean;
   bleedInches?: number;

@@ -5,14 +5,14 @@
  * Label Studio API specification
  * OpenAPI spec version: 0.1.0
  */
-import type { LabelTemplateZones } from "./labelTemplateZones";
 
 export interface LabelTemplate {
   id: number;
   name: string;
   description?: string | null;
   labelSheetId?: number | null;
-  zones: LabelTemplateZones;
+  /** Zone layout — array of zone objects (new format) or named-zone object (legacy format) */
+  zones: unknown;
   previewNotes?: string | null;
   safeAreaEnabled: boolean;
   bleedInches: number;

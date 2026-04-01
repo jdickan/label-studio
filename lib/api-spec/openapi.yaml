@@ -703,7 +703,7 @@ components:
           type: integer
           nullable: true
         zones:
-          type: object
+          description: Zone layout — array of zone objects (new format) or named-zone object (legacy format)
         previewNotes:
           type: string
           nullable: true
@@ -739,7 +739,7 @@ components:
         labelSheetId:
           type: integer
         zones:
-          type: object
+          description: Zone layout — array of zone objects (new format) or named-zone object (legacy format)
         previewNotes:
           type: string
         safeAreaEnabled:
@@ -763,7 +763,7 @@ components:
           type: integer
           nullable: true
         zones:
-          type: object
+          description: Zone layout — array of zone objects (new format) or named-zone object (legacy format)
         previewNotes:
           type: string
         safeAreaEnabled:
