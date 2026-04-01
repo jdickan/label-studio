@@ -26,7 +26,14 @@ The project is a pnpm workspace with four categories of packages:
 | `lib/db` | `@workspace/db` | Drizzle ORM schema, migrations, DB connection |
 | `scripts` | `@workspace/scripts` | Database seed script |
 
-All packages extend `tsconfig.base.json`. Library packages (`lib/*`) set `composite: true` and emit declaration files, enabling TypeScript project references from app packages. App/script packages (`artifacts/*`, `scripts`) use references to consume the libraries but do not set `composite` themselves. The base config enables strict-leaning settings individually (`noImplicitAny`, `strictNullChecks`, `strictBindCallApply`, `strictPropertyInitialization`, `noImplicitReturns`) rather than using the `strict` umbrella flag.
+All packages extend `tsconfig.base.json`. Three TypeScript library packages set `composite: true` and emit declaration files, enabling TypeScript project references:
+- `lib/db` — composite + declarationMap
+- `lib/api-client-react` — composite + declarationMap
+- `lib/api-zod` — composite + declarationMap
+
+`lib/api-spec` is a plain JavaScript/TypeScript tooling package (Orval config); it has no `tsconfig.json`. App/script packages (`artifacts/*`, `scripts`) use project `references` to consume the composite libs but do not set `composite` themselves.
+
+The base config enables strict-leaning settings individually (`noImplicitAny`, `strictNullChecks`, `strictBindCallApply`, `strictPropertyInitialization`, `noImplicitReturns`) rather than using the `strict` umbrella flag.
 
 ---
 
@@ -40,7 +47,9 @@ Replit routes incoming requests by path prefix. Each artifact registers a `previ
 | `label-studio` | `/` (root) | 23804 (set via `PORT` env var injected by Replit) |
 | `mockup-sandbox` | `/__mockup` | 8081 (set via `PORT` env var injected by Replit) |
 
-Ports are runtime-configured by Replit via the `PORT` environment variable declared in each `artifact.toml`. The values above are the defaults defined there but are controlled by the platform. The frontend Vite dev server proxies `/api/*` requests to the API server. In production, Replit's path-based routing handles the same via `artifact.toml`.
+Ports are runtime-configured by Replit via the `PORT` environment variable declared in each `artifact.toml`. The values above are the defaults defined there but are controlled by the platform.
+
+**API routing in development and production:** Replit's path-based artifact routing forwards `/api/*` requests to the api-server artifact directly. The Vite dev server has **no proxy block** — the frontend uses root-relative `/api/...` URLs and relies entirely on platform routing, not a Vite proxy. This is consistent between development (Replit dev URLs) and production (`.replit.app` domain).
 
 ---
 

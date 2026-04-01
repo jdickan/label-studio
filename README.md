@@ -22,7 +22,7 @@ Label Studio lets you:
 |---|---|
 | Monorepo | pnpm workspaces |
 | Node.js | v24 |
-| Language | TypeScript 5.9 (strict-leaning flags; `composite: true` for `lib/*` packages only) |
+| Language | TypeScript 5.9 (strict-leaning flags; `composite: true` for `lib/db`, `lib/api-client-react`, `lib/api-zod` only) |
 | API server | Express 5 |
 | Database | PostgreSQL + Drizzle ORM |
 | Validation | Zod (`zod/v4`), `drizzle-zod` |
