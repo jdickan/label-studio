@@ -125,6 +125,13 @@ Summary stats (total sheets, templates, products, print jobs), recent print jobs
 
 ---
 
+## Known Gaps / Planned Work
+
+- **Print-job content PDF** — print jobs currently produce a browser preview only; a content-rendered PDF (product fields mapped to label zones) is planned
+- **Server-side font storage** — uploaded fonts are session-local via the browser `FontFace` API; persistent server-side font hosting is planned
+- **Visual label template designer** — the current zone editor is a JSON textarea; an upload-driven visual editor (image → LLM zone detection → drag-to-resize) is planned
+- **PDF guide lines** — margin, safe-area, and bleed geometry is shown in the browser sheet preview but not yet rendered into the downloaded PDF
+
 ## Documentation Index
 
 - [Architecture](docs/ARCHITECTURE.md) — monorepo layout, DB schema, API structure, key design decisions
