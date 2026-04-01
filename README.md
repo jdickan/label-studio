@@ -22,7 +22,7 @@ Label Studio lets you:
 |---|---|
 | Monorepo | pnpm workspaces |
 | Node.js | v24 |
-| Language | TypeScript 5.9 (strict, composite projects) |
+| Language | TypeScript 5.9 (strict-leaning flags; `composite: true` for `lib/*` packages only) |
 | API server | Express 5 |
 | Database | PostgreSQL + Drizzle ORM |
 | Validation | Zod (`zod/v4`), `drizzle-zod` |
@@ -52,7 +52,7 @@ label-studio/
 │   └── src/seed.ts          # Database seed script (@workspace/scripts)
 ├── docs/                    # Project documentation
 ├── pnpm-workspace.yaml
-├── tsconfig.base.json       # Shared TS config (composite: true, strict)
+├── tsconfig.base.json       # Shared TS config (strict-leaning flags; lib/* packages add composite: true)
 └── package.json             # Root scripts
 ```
 
