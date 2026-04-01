@@ -79,6 +79,36 @@ const ANALYSIS_STEPS = [
 
 const DEFAULT_ASPECT = 4.75 / 1.25;
 
+// ─── Safe-area guide constants ─────────────────────────────────────────────────
+// Fractional inset from each edge (proportion of label dimension).
+const IMAGE_SAFE_INSET = 0.03;   // 3% — bleed/cut boundary
+const TEXT_SAFE_INSET  = 0.06;   // 6% — typography safety margin
+const SNAP_THRESHOLD   = 0.025;  // within 2.5% → snap to guide
+
+/** Snap a zone edge pair to the nearest guide candidate. */
+function snapEdge(pos: number, size: number, guides: number[], thresh: number): number {
+  let best = pos;
+  let bestDist = thresh;
+  for (const g of guides) {
+    const dl = Math.abs(pos - g);          // left/top edge distance
+    const dr = Math.abs(pos + size - g);   // right/bottom edge distance
+    if (dl < bestDist) { bestDist = dl; best = g; }
+    if (dr < bestDist) { bestDist = dr; best = g - size; }
+  }
+  return best;
+}
+
+/** Snap a trailing edge (right or bottom during resize). */
+function snapTrailingEdge(edge: number, guides: number[], thresh: number): number {
+  let best = edge;
+  let bestDist = thresh;
+  for (const g of guides) {
+    const d = Math.abs(edge - g);
+    if (d < bestDist) { bestDist = d; best = g; }
+  }
+  return best;
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function computeMaxChars(zone: Omit<LabelZone, "maxChars">): number {
@@ -249,9 +279,11 @@ type ZoneCanvasProps = {
   label?: string;
   headingFont?: string;
   bodyFont?: string;
+  showTextSafe?: boolean;
+  showImageSafe?: boolean;
 };
 
-function ZoneCanvas({ zones, selectedId, onSelect, onChange, imageUrl, canvasW, canvasH, readOnly, label, headingFont, bodyFont }: ZoneCanvasProps) {
+function ZoneCanvas({ zones, selectedId, onSelect, onChange, imageUrl, canvasW, canvasH, readOnly, label, headingFont, bodyFont, showTextSafe, showImageSafe }: ZoneCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [editingZoneId, setEditingZoneId] = useState<string | null>(null);
   const dragState = useRef<{
@@ -276,14 +308,35 @@ function ZoneCanvas({ zones, selectedId, onSelect, onChange, imageUrl, canvasW, 
     if (!ds || !onChange) return;
     const dx = (e.clientX - ds.startClientX) / ds.canvasRect.width;
     const dy = (e.clientY - ds.startClientY) / ds.canvasRect.height;
+
+    const snapXs = [0, 1,
+      ...(showImageSafe ? [IMAGE_SAFE_INSET, 1 - IMAGE_SAFE_INSET] : []),
+      ...(showTextSafe  ? [TEXT_SAFE_INSET,  1 - TEXT_SAFE_INSET]  : []),
+    ];
+    const snapYs = [0, 1,
+      ...(showImageSafe ? [IMAGE_SAFE_INSET, 1 - IMAGE_SAFE_INSET] : []),
+      ...(showTextSafe  ? [TEXT_SAFE_INSET,  1 - TEXT_SAFE_INSET]  : []),
+    ];
+
     onChange(zones.map(z => {
       if (z.id !== ds.zoneId) return z;
-      const updated = ds.type === "drag"
-        ? { ...z, x: Math.max(0, Math.min(1 - z.w, ds.startZone.x + dx)), y: Math.max(0, Math.min(1 - z.h, ds.startZone.y + dy)) }
-        : { ...z, w: Math.max(0.05, Math.min(1 - z.x, ds.startZone.w + dx)), h: Math.max(0.03, Math.min(1 - z.y, ds.startZone.h + dy)) };
+      let updated: LabelZone;
+      if (ds.type === "drag") {
+        const rawX = Math.max(0, Math.min(1 - z.w, ds.startZone.x + dx));
+        const rawY = Math.max(0, Math.min(1 - z.h, ds.startZone.y + dy));
+        const snX = Math.max(0, Math.min(1 - z.w, snapEdge(rawX, z.w, snapXs, SNAP_THRESHOLD)));
+        const snY = Math.max(0, Math.min(1 - z.h, snapEdge(rawY, z.h, snapYs, SNAP_THRESHOLD)));
+        updated = { ...z, x: snX, y: snY };
+      } else {
+        const rawW = Math.max(0.05, Math.min(1 - z.x, ds.startZone.w + dx));
+        const rawH = Math.max(0.03, Math.min(1 - z.y, ds.startZone.h + dy));
+        const snR = Math.max(z.x + 0.05, Math.min(1, snapTrailingEdge(z.x + rawW, snapXs, SNAP_THRESHOLD)));
+        const snB = Math.max(z.y + 0.03, Math.min(1, snapTrailingEdge(z.y + rawH, snapYs, SNAP_THRESHOLD)));
+        updated = { ...z, w: snR - z.x, h: snB - z.y };
+      }
       return withMaxChars(updated);
     }));
-  }, [zones, onChange]);
+  }, [zones, onChange, showImageSafe, showTextSafe]);
 
   const handlePointerUp = useCallback(() => { dragState.current = null; }, []);
 
@@ -483,6 +536,48 @@ function ZoneCanvas({ zones, selectedId, onSelect, onChange, imageUrl, canvasW, 
             </div>
           );
         })}
+
+        {/* ── Safe area guides ─────────────────────────────────────────── */}
+        {showImageSafe && (
+          <div
+            className="absolute pointer-events-none"
+            style={{
+              left:   `${IMAGE_SAFE_INSET * 100}%`,
+              top:    `${IMAGE_SAFE_INSET * 100}%`,
+              right:  `${IMAGE_SAFE_INSET * 100}%`,
+              bottom: `${IMAGE_SAFE_INSET * 100}%`,
+              border: "1.5px dashed #f97316",
+              zIndex: 60,
+            }}
+          >
+            <span
+              className="absolute -top-[14px] left-0 text-[9px] font-semibold leading-none px-1"
+              style={{ color: "#f97316", background: "rgba(255,255,255,0.75)", borderRadius: 2 }}
+            >
+              image safe
+            </span>
+          </div>
+        )}
+        {showTextSafe && (
+          <div
+            className="absolute pointer-events-none"
+            style={{
+              left:   `${TEXT_SAFE_INSET * 100}%`,
+              top:    `${TEXT_SAFE_INSET * 100}%`,
+              right:  `${TEXT_SAFE_INSET * 100}%`,
+              bottom: `${TEXT_SAFE_INSET * 100}%`,
+              border: "1.5px dashed #3b82f6",
+              zIndex: 61,
+            }}
+          >
+            <span
+              className="absolute -top-[14px] left-0 text-[9px] font-semibold leading-none px-1"
+              style={{ color: "#3b82f6", background: "rgba(255,255,255,0.75)", borderRadius: 2 }}
+            >
+              text safe
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -791,7 +886,8 @@ export default function LabelTemplates() {
   const [templateDescription, setTemplateDescription] = useState("");
   const [labelSheetId, setLabelSheetId] = useState<string>("none");
   const [previewSheetId, setPreviewSheetId] = useState<string>("none");
-  const [safeAreaEnabled, setSafeAreaEnabled] = useState(false);
+  const [showImageSafe, setShowImageSafe] = useState(false);
+  const [showTextSafe, setShowTextSafe] = useState(false);
   const [showAdvancedJson, setShowAdvancedJson] = useState(false);
   const [jsonText, setJsonText] = useState("");
   const [showPreview, setShowPreview] = useState(false);
@@ -832,7 +928,8 @@ export default function LabelTemplates() {
     setTemplateName(t.name);
     setTemplateDescription(t.description ?? "");
     setLabelSheetId(t.labelSheetId?.toString() ?? "none");
-    setSafeAreaEnabled(t.safeAreaEnabled ?? false);
+    setShowImageSafe(t.safeAreaEnabled ?? false);
+    setShowTextSafe(t.safeAreaEnabled ?? false);
     setImageUrl(undefined);
     setSelectedZoneId(null);
     const rawZones = t.zones;
@@ -851,7 +948,8 @@ export default function LabelTemplates() {
     setTemplateName("New Template");
     setTemplateDescription("");
     setLabelSheetId("none");
-    setSafeAreaEnabled(false);
+    setShowImageSafe(false);
+    setShowTextSafe(false);
     setImageUrl(undefined);
     setSelectedZoneId(null);
     setZones([
@@ -932,7 +1030,7 @@ export default function LabelTemplates() {
       description: templateDescription || undefined,
       labelSheetId: labelSheetId === "none" ? undefined : parseInt(labelSheetId),
       zones: zonesWithMaxChars as unknown,
-      safeAreaEnabled,
+      safeAreaEnabled: showImageSafe || showTextSafe,
     };
     if (activeTemplateId) {
       updateMutation.mutate({ id: activeTemplateId, data: payload });
@@ -1060,6 +1158,39 @@ export default function LabelTemplates() {
                   </SelectContent>
                 </Select>
 
+                {/* Safe-area guide toggles */}
+                <div className="flex items-center gap-1 border rounded-md px-1.5 py-1">
+                  <span className="text-xs text-muted-foreground mr-0.5">Guides:</span>
+                  <button
+                    type="button"
+                    title="Toggle image safe area (3% inset)"
+                    onClick={() => setShowImageSafe(v => !v)}
+                    className={cn(
+                      "flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium transition-colors",
+                      showImageSafe
+                        ? "bg-orange-100 text-orange-700 border border-orange-300"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <span className="inline-block w-2.5 h-2.5 rounded-sm border-[1.5px] border-dashed border-current" />
+                    Image
+                  </button>
+                  <button
+                    type="button"
+                    title="Toggle text safe area (6% inset)"
+                    onClick={() => setShowTextSafe(v => !v)}
+                    className={cn(
+                      "flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium transition-colors",
+                      showTextSafe
+                        ? "bg-blue-100 text-blue-700 border border-blue-300"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <span className="inline-block w-2.5 h-2.5 rounded-sm border-[1.5px] border-dashed border-current" />
+                    Text
+                  </button>
+                </div>
+
                 <div className="flex items-center gap-1.5 ml-auto">
                   <Columns2 className="w-3.5 h-3.5 text-muted-foreground" />
                   <span className="text-xs text-muted-foreground">Compare with:</span>
@@ -1104,6 +1235,8 @@ export default function LabelTemplates() {
                         label={isSideBySide ? (assignedSheet ? `${assignedSheet.code} (assigned)` : "Current sheet") : undefined}
                         headingFont={designSystem?.headingFont}
                         bodyFont={designSystem?.bodyFont}
+                        showImageSafe={showImageSafe}
+                        showTextSafe={showTextSafe}
                       />
                       {isSideBySide && previewSheet && (
                         <ZoneCanvas
@@ -1116,6 +1249,8 @@ export default function LabelTemplates() {
                           label={`${previewSheet.code} — ${previewSheet.labelWidth}"×${previewSheet.labelHeight}"`}
                           headingFont={designSystem?.headingFont}
                           bodyFont={designSystem?.bodyFont}
+                          showImageSafe={showImageSafe}
+                          showTextSafe={showTextSafe}
                         />
                       )}
                     </div>
@@ -1150,12 +1285,25 @@ export default function LabelTemplates() {
                         />
                       </div>
 
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <Label className="text-sm font-medium">Safe area guides</Label>
-                          <p className="text-xs text-muted-foreground mt-0.5">Bleed/live area overlays</p>
+                      <div className="space-y-2">
+                        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Safe Area Guides</Label>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5">
+                            <span className="inline-block w-3 h-3 rounded-sm border-2 border-dashed border-orange-500" />
+                            <span className="text-sm">Image safe</span>
+                            <span className="text-xs text-muted-foreground">(3% inset)</span>
+                          </div>
+                          <Switch checked={showImageSafe} onCheckedChange={setShowImageSafe} />
                         </div>
-                        <Switch checked={safeAreaEnabled} onCheckedChange={setSafeAreaEnabled} />
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5">
+                            <span className="inline-block w-3 h-3 rounded-sm border-2 border-dashed border-blue-500" />
+                            <span className="text-sm">Text safe</span>
+                            <span className="text-xs text-muted-foreground">(6% inset)</span>
+                          </div>
+                          <Switch checked={showTextSafe} onCheckedChange={setShowTextSafe} />
+                        </div>
+                        <p className="text-xs text-muted-foreground">Zones snap to guides when dragged near them.</p>
                       </div>
 
                       <Separator />
