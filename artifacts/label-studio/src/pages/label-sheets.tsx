@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { 
-  Layers, Plus, Maximize, Grip, Trash2, Edit2, ZoomIn,
+  Layers, Plus, Maximize, Grip, Trash2, Edit2, ZoomIn, Download,
   Upload, FileText, CheckCircle2, XCircle, AlertTriangle,
   Loader2, ArrowRight, RotateCcw
 } from "lucide-react";
@@ -959,10 +959,21 @@ export default function LabelSheets() {
               </div>
             </CardContent>
 
-            <CardFooter className="bg-secondary/10 border-t py-3 flex justify-between opacity-0 group-hover:opacity-100 transition-opacity">
-              <Button variant="ghost" size="sm" onClick={() => handleEdit(sheet as LabelSheet)}>
-                <Edit2 className="w-4 h-4 mr-2" /> Edit
-              </Button>
+            <CardFooter className="bg-secondary/10 border-t py-3 flex justify-between items-center opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="flex items-center gap-1">
+                <Button variant="ghost" size="sm" onClick={() => handleEdit(sheet as LabelSheet)}>
+                  <Edit2 className="w-4 h-4 mr-2" /> Edit
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-muted-foreground hover:text-foreground"
+                  onClick={() => { window.location.href = `/api/label-sheets/${sheet.id}/pdf`; }}
+                  title="Download PDF template"
+                >
+                  <Download className="w-4 h-4 mr-2" /> PDF
+                </Button>
+              </div>
               {sheet.isCustom && (
                 <Button
                   variant="ghost"
