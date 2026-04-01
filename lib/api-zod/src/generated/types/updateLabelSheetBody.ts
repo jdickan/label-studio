@@ -22,4 +22,6 @@ export interface UpdateLabelSheetBody {
   horizontalGap?: number;
   verticalGap?: number;
   shape?: UpdateLabelSheetBodyShape;
+  /** Corner radius in inches (null or 0 = square corners) */
+  cornerRadius?: number | null;
 }

@@ -46,6 +46,7 @@ type LabelSheet = {
   horizontalGap: number;
   verticalGap: number;
   shape: "rectangle" | "circle" | "oval";
+  cornerRadius?: number | null;
   isCustom: boolean;
 };
 
@@ -72,10 +73,12 @@ function SheetPreview({ sheet }: { sheet: LabelSheet }) {
     }
   }
 
+  const cornerRadiusPx = (sheet.cornerRadius ?? 0) * scale;
   const borderRadius =
     sheet.shape === "circle" ? "50%"
     : sheet.shape === "oval"  ? "50%"
-    : "2px";
+    : cornerRadiusPx > 0 ? `${cornerRadiusPx}px`
+    : "0px";
 
   const pctScale = Math.round((PREVIEW_W / (sheet.pageWidth * 96)) * 100);
 
@@ -128,12 +131,13 @@ function SheetPreview({ sheet }: { sheet: LabelSheet }) {
           {[
             ["Label Size",       `${sheet.labelWidth}" × ${sheet.labelHeight}"`],
             ["Shape",            sheet.shape.charAt(0).toUpperCase() + sheet.shape.slice(1)],
+            ["Corner Radius",    sheet.cornerRadius ? `${sheet.cornerRadius}" (${Math.round(sheet.cornerRadius * 25.4 * 10) / 10}mm)` : 'Square corners (0")'],
             ["Labels per Sheet", `${sheet.labelsAcross * sheet.labelsDown} (${sheet.labelsAcross} × ${sheet.labelsDown})`],
             ["Page Size",        `${sheet.pageWidth}" × ${sheet.pageHeight}"`],
             ["Top Margin",       `${sheet.topMargin}"`],
             ["Left Margin",      `${sheet.leftMargin}"`],
-            ["Horizontal Gap",   `${sheet.horizontalGap}"`],
-            ["Vertical Gap",     `${sheet.verticalGap}"`],
+            ["Horizontal Gap",   sheet.horizontalGap > 0 ? `${sheet.horizontalGap}"` : `0" (labels touch)`],
+            ["Vertical Gap",     sheet.verticalGap > 0 ? `${sheet.verticalGap}"` : `0" (labels touch)`],
           ].map(([k, v]) => (
             <div key={k} className="px-3 py-2 border-border">
               <div className="text-muted-foreground text-xs">{k}</div>

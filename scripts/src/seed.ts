@@ -182,12 +182,14 @@ async function seed() {
       labelHeight: 1.25,
       labelsAcross: 4,
       labelsDown: 8,
-      // H: 0.25 + 4×2 + 3×0 + 0.25 = 8.5 ✓  V: 0.5 + 8×1.25 + 7×0 + 0.5 = 11 ✓
+      // H: 0.0625 + 4×2 + 3×0.125 + 0.0625 = 0.0625+8+0.375+0.0625 = 8.5 ✓
+      // V: 0.5 + 8×1.25 + 7×0 + 0.5 = 0.5+10+0.5 = 11 ✓
       topMargin: 0.5,
-      leftMargin: 0.25,
-      horizontalGap: 0,
+      leftMargin: 0.0625,
+      horizontalGap: 0.125,
       verticalGap: 0,
       shape: "rectangle",
+      cornerRadius: 0.0625,
       isCustom: false,
     },
     {
@@ -200,13 +202,14 @@ async function seed() {
       labelHeight: 1.5,
       labelsAcross: 3,
       labelsDown: 7,
-      // H: 0.625 + 3×2.25 + 2×0.25 + 0.625 = 0.625+6.75+0.5+0.625 = 8.5 ✓
+      // H: 0.75 + 3×2.25 + 2×0.125 + 0.75 = 0.75+6.75+0.25+0.75 = 8.5 ✓
       // V: 0.25 + 7×1.5 + 6×0 + 0.25 = 0.25+10.5+0.25 = 11 ✓
       topMargin: 0.25,
-      leftMargin: 0.625,
-      horizontalGap: 0.25,
+      leftMargin: 0.75,
+      horizontalGap: 0.125,
       verticalGap: 0,
       shape: "rectangle",
+      cornerRadius: 0.0625,
       isCustom: false,
     },
     {
@@ -219,13 +222,14 @@ async function seed() {
       labelHeight: 2.2,
       labelsAcross: 3,
       labelsDown: 5,
-      // H: 3×2.83333 = 8.5 ✓ (zero margins — small margins per OL warning)
-      // V: 5×2.2 = 11 ✓ (zero margins)
+      // H: 3×2.83333 = 8.5 ✓ (borderless — labels touch edge-to-edge)
+      // V: 5×2.2 = 11 ✓ (borderless)
       topMargin: 0,
       leftMargin: 0,
       horizontalGap: 0,
       verticalGap: 0,
       shape: "rectangle",
+      cornerRadius: 0.1,
       isCustom: false,
     },
     {
@@ -238,12 +242,14 @@ async function seed() {
       labelHeight: 2,
       labelsAcross: 5,
       labelsDown: 5,
-      // H: 0.5 + 5×1.5 + 4×0 + 0.5 = 8.5 ✓  V: 0.5 + 5×2 + 4×0 + 0.5 = 11 ✓
-      topMargin: 0.5,
-      leftMargin: 0.5,
-      horizontalGap: 0,
-      verticalGap: 0,
+      // H: 0.25 + 5×1.5 + 4×0.125 + 0.25 = 0.25+7.5+0.5+0.25 = 8.5 ✓
+      // V: 0.25 + 5×2 + 4×0.125 + 0.25 = 0.25+10+0.5+0.25 = 11 ✓
+      topMargin: 0.25,
+      leftMargin: 0.25,
+      horizontalGap: 0.125,
+      verticalGap: 0.125,
       shape: "rectangle",
+      cornerRadius: 0.125,
       isCustom: false,
     },
     {
@@ -256,13 +262,15 @@ async function seed() {
       labelHeight: 2,
       labelsAcross: 3,
       labelsDown: 5,
-      // H: 0.125 + 3×2.675 + 2×0.175 = 0.125+8.025+0.35 = 8.5 ✓ (right margin ≈ 0, OL warns small margins)
+      // H: 0.1625 + 3×2.675 + 2×0.075 + 0.1625 = 0.1625+8.025+0.15+0.1625 = 8.5 ✓
       // V: 0.5 + 5×2 + 4×0 + 0.5 = 11 ✓
+      // Note: OL warns horizontal margins (0.1625") are narrower than typical 0.25" printer safe zone
       topMargin: 0.5,
-      leftMargin: 0.125,
-      horizontalGap: 0.175,
+      leftMargin: 0.1625,
+      horizontalGap: 0.075,
       verticalGap: 0,
       shape: "rectangle",
+      cornerRadius: 0.1,
       isCustom: false,
     },
     {
@@ -276,12 +284,13 @@ async function seed() {
       labelsAcross: 3,
       labelsDown: 6,
       // H: 0.25 + 3×2.5 + 2×0.25 + 0.25 = 0.25+7.5+0.5+0.25 = 8.5 ✓
-      // V: 0.8125 + 6×1.5625 + 5×0 + 0.8125 = 0.8125+9.375+0.8125 = 11 ✓
-      topMargin: 0.8125,
+      // V: 0.5 + 6×1.5625 + 5×0.125 + 0.5 = 0.5+9.375+0.625+0.5 = 11 ✓
+      topMargin: 0.5,
       leftMargin: 0.25,
       horizontalGap: 0.25,
-      verticalGap: 0,
+      verticalGap: 0.125,
       shape: "rectangle",
+      cornerRadius: 0.1,
       isCustom: false,
     },
 

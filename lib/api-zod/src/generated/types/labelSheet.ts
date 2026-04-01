@@ -23,6 +23,8 @@ export interface LabelSheet {
   horizontalGap: number;
   verticalGap: number;
   shape: LabelSheetShape;
+  /** Corner radius in inches (null or 0 = square corners) */
+  cornerRadius?: number | null;
   isCustom: boolean;
   createdAt: Date;
   updatedAt: Date;

@@ -38,6 +38,8 @@ export interface LabelSheet {
   horizontalGap: number;
   verticalGap: number;
   shape: LabelSheetShape;
+  /** Corner radius in inches (null or 0 = square corners) */
+  cornerRadius?: number | null;
   isCustom: boolean;
   createdAt: string;
   updatedAt: string;
@@ -67,6 +69,8 @@ export interface CreateLabelSheetBody {
   horizontalGap: number;
   verticalGap: number;
   shape: CreateLabelSheetBodyShape;
+  /** Corner radius in inches (null or 0 = square corners) */
+  cornerRadius?: number | null;
 }
 
 export type UpdateLabelSheetBodyShape =
@@ -93,6 +97,8 @@ export interface UpdateLabelSheetBody {
   horizontalGap?: number;
   verticalGap?: number;
   shape?: UpdateLabelSheetBodyShape;
+  /** Corner radius in inches (null or 0 = square corners) */
+  cornerRadius?: number | null;
 }
 
 export type LabelTemplateZones = { [key: string]: unknown };

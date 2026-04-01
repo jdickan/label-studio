@@ -18,6 +18,7 @@ export const labelSheetsTable = pgTable("label_sheets", {
   horizontalGap: real("horizontal_gap").notNull(),
   verticalGap: real("vertical_gap").notNull(),
   shape: text("shape", { enum: ["rectangle", "circle", "oval"] }).notNull().default("rectangle"),
+  cornerRadius: real("corner_radius"),
   isCustom: boolean("is_custom").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),

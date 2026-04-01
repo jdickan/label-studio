@@ -33,6 +33,10 @@ export const GetLabelSheetsResponseItem = zod.object({
   horizontalGap: zod.number(),
   verticalGap: zod.number(),
   shape: zod.enum(["rectangle", "circle", "oval"]),
+  cornerRadius: zod
+    .number()
+    .nullish()
+    .describe("Corner radius in inches (null or 0 = square corners)"),
   isCustom: zod.boolean(),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
@@ -57,6 +61,10 @@ export const CreateLabelSheetBody = zod.object({
   horizontalGap: zod.number(),
   verticalGap: zod.number(),
   shape: zod.enum(["rectangle", "circle", "oval"]),
+  cornerRadius: zod
+    .number()
+    .nullish()
+    .describe("Corner radius in inches (null or 0 = square corners)"),
 });
 
 /**
@@ -82,6 +90,10 @@ export const GetLabelSheetResponse = zod.object({
   horizontalGap: zod.number(),
   verticalGap: zod.number(),
   shape: zod.enum(["rectangle", "circle", "oval"]),
+  cornerRadius: zod
+    .number()
+    .nullish()
+    .describe("Corner radius in inches (null or 0 = square corners)"),
   isCustom: zod.boolean(),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
@@ -109,6 +121,10 @@ export const UpdateLabelSheetBody = zod.object({
   horizontalGap: zod.number().optional(),
   verticalGap: zod.number().optional(),
   shape: zod.enum(["rectangle", "circle", "oval"]).optional(),
+  cornerRadius: zod
+    .number()
+    .nullish()
+    .describe("Corner radius in inches (null or 0 = square corners)"),
 });
 
 export const UpdateLabelSheetResponse = zod.object({
@@ -127,6 +143,10 @@ export const UpdateLabelSheetResponse = zod.object({
   horizontalGap: zod.number(),
   verticalGap: zod.number(),
   shape: zod.enum(["rectangle", "circle", "oval"]),
+  cornerRadius: zod
+    .number()
+    .nullish()
+    .describe("Corner radius in inches (null or 0 = square corners)"),
   isCustom: zod.boolean(),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),

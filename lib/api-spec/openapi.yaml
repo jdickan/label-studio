@@ -544,6 +544,10 @@ components:
         shape:
           type: string
           enum: [rectangle, circle, oval]
+        cornerRadius:
+          type: number
+          nullable: true
+          description: Corner radius in inches (null or 0 = square corners)
         isCustom:
           type: boolean
         createdAt:
@@ -604,6 +608,10 @@ components:
         shape:
           type: string
           enum: [rectangle, circle, oval]
+        cornerRadius:
+          type: number
+          nullable: true
+          description: Corner radius in inches (null or 0 = square corners)
       required:
         - name
         - brand
@@ -652,6 +660,10 @@ components:
         shape:
           type: string
           enum: [rectangle, circle, oval]
+        cornerRadius:
+          type: number
+          nullable: true
+          description: Corner radius in inches (null or 0 = square corners)
 
     LabelTemplate:
       type: object
