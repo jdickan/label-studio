@@ -1,4 +1,4 @@
-import { db, labelSheetsTable, productsTable, designSystemTable, printJobsTable } from "@workspace/db";
+import { db, labelSheetsTable, productsTable, designSystemTable, printJobsTable, labelTemplatesTable } from "@workspace/db";
 
 async function seed() {
   console.log("Seeding database...");
@@ -164,6 +164,9 @@ async function seed() {
       verticalGap: 0,
       shape: "rectangle",
       isCustom: true,
+      safeAreaEnabled: true,
+      bleedInches: 0.125,
+      safeAreaInches: 0.125,
     },
   ]).returning();
 
@@ -267,6 +270,30 @@ async function seed() {
       },
     ]);
     console.log("Seeded products");
+  }
+
+  // Seed a CandleBliss label template with safe area specs enabled
+  const cbSheet = sheets.find(s => s.code === "CB-4OZ-TIN");
+  if (cbSheet) {
+    const existingTemplates = await db.select().from(labelTemplatesTable).limit(1);
+    if (existingTemplates.length === 0) {
+      await db.insert(labelTemplatesTable).values({
+        name: "CandleBliss 4oz Tin Wrap",
+        description: "Wrap-around label for CandleBliss 4oz small tin. Submitted to third-party printer — safe area guides enabled.",
+        labelSheetId: cbSheet.id,
+        zones: {
+          brandName: { top: "8%", left: "5%", width: "90%", height: "18%", align: "center", fontSize: "7pt", bold: true },
+          productName: { top: "30%", left: "5%", width: "90%", height: "24%", align: "center", fontSize: "11pt", bold: true },
+          scentNotes: { top: "56%", left: "5%", width: "90%", height: "16%", align: "center", fontSize: "6pt" },
+          weight: { top: "76%", left: "5%", width: "42%", height: "14%", align: "left", fontSize: "5pt" },
+          website: { top: "76%", left: "53%", width: "42%", height: "14%", align: "right", fontSize: "5pt" },
+        },
+        safeAreaEnabled: true,
+        bleedInches: 0.125,
+        safeAreaInches: 0.125,
+      });
+      console.log("Seeded CandleBliss label template with safe area specs");
+    }
   }
 
   // Seed a sample print job using the first OnlineLabels sheet

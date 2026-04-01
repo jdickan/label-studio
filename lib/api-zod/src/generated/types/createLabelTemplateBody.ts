@@ -13,4 +13,7 @@ export interface CreateLabelTemplateBody {
   labelSheetId?: number;
   zones: CreateLabelTemplateBodyZones;
   previewNotes?: string;
+  safeAreaEnabled?: boolean;
+  bleedInches?: number;
+  safeAreaInches?: number;
 }

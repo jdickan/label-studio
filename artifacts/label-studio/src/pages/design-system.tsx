@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { 
   useGetDesignSystem, 
   useUpdateDesignSystem,
@@ -9,8 +9,210 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Save, UploadCloud } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Save, UploadCloud, Type, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
+
+const KERN_PAIRS = ["AV", "AW", "LT", "TA"];
+
+function KerningSpecimen() {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Optical Kerning</CardTitle>
+        <CardDescription>
+          Font kern table activation for problematic letter pairs — kern on (left) vs. kern off (right) simultaneously.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
+          {KERN_PAIRS.map(pair => (
+            <div key={pair} className="flex flex-col items-center gap-3">
+              <div className="flex items-end gap-3">
+                <div className="flex flex-col items-center gap-1">
+                  <span className={cn("text-5xl font-bold leading-none select-none kern-on")}>
+                    {pair}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground uppercase tracking-wide font-mono">on</span>
+                </div>
+                <div className="text-muted-foreground/30 text-lg mb-3">|</div>
+                <div className="flex flex-col items-center gap-1">
+                  <span className={cn("text-5xl font-bold leading-none select-none kern-off")}>
+                    {pair}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground uppercase tracking-wide font-mono">off</span>
+                </div>
+              </div>
+              <span className="text-xs text-muted-foreground font-mono">{pair}</span>
+            </div>
+          ))}
+        </div>
+        <p className="text-xs text-muted-foreground mt-6 border-t pt-4">
+          Global kerning is <span className="font-medium text-foreground">enabled</span> via <code className="font-mono text-[11px] bg-muted px-1 rounded">font-feature-settings: "kern" 1</code> on <code className="font-mono text-[11px] bg-muted px-1 rounded">body</code>. Use <code className="font-mono text-[11px] bg-muted px-1 rounded">.kern-on</code> / <code className="font-mono text-[11px] bg-muted px-1 rounded">.kern-off</code> utility classes to override per-element.
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
+type LoadedFont = {
+  name: string;
+  family: string;
+  size: number;
+};
+
+function FontUploadCard({
+  slot,
+  label,
+  currentFamily,
+  onFontLoaded,
+}: {
+  slot: "heading" | "body";
+  label: string;
+  currentFamily: string;
+  onFontLoaded: (family: string) => void;
+}) {
+  const [loadedFont, setLoadedFont] = useState<LoadedFont | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const allowed = [".woff", ".woff2", ".ttf", ".otf"];
+    if (!allowed.some(ext => file.name.toLowerCase().endsWith(ext))) {
+      toast({ title: "Unsupported file", description: "Please upload a .woff, .woff2, .ttf or .otf font file.", variant: "destructive" });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      const dataUrl = ev.target?.result as string;
+      const familyName = `custom-${slot}-${Date.now()}`;
+      try {
+        const ff = new FontFace(familyName, `url(${dataUrl})`);
+        const loaded = await ff.load();
+        document.fonts.add(loaded);
+        setLoadedFont({ name: file.name, family: familyName, size: Math.round(file.size / 1024) });
+        onFontLoaded(familyName);
+        toast({ title: `${label} font loaded`, description: file.name });
+      } catch {
+        toast({ title: "Font load failed", description: "The file may be corrupt or an unsupported format.", variant: "destructive" });
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
+  const handleClear = () => {
+    setLoadedFont(null);
+    onFontLoaded("");
+  };
+
+  return (
+    <div className="space-y-3">
+      <Label>{label}</Label>
+      <div className="flex items-center gap-2">
+        <Input
+          className="font-mono text-sm"
+          value={loadedFont ? loadedFont.family : currentFamily}
+          readOnly={!!loadedFont}
+          onChange={!loadedFont ? (e) => onFontLoaded(e.target.value) : undefined}
+          placeholder="e.g. Playfair Display"
+        />
+        <Button
+          type="button"
+          variant="outline"
+          className="shrink-0"
+          onClick={() => inputRef.current?.click()}
+          title="Upload font file"
+        >
+          <UploadCloud className="w-4 h-4 mr-2" /> Upload
+        </Button>
+        <input
+          ref={inputRef}
+          type="file"
+          accept=".woff,.woff2,.ttf,.otf"
+          className="hidden"
+          onChange={handleFile}
+        />
+        {loadedFont && (
+          <Button type="button" variant="ghost" size="icon" onClick={handleClear} title="Remove uploaded font">
+            <X className="w-4 h-4" />
+          </Button>
+        )}
+      </div>
+      {loadedFont && (
+        <div className="flex items-center gap-2">
+          <Badge variant="secondary" className="gap-1.5 text-xs">
+            <Type className="w-3 h-3" />
+            {loadedFont.name}
+            <span className="text-muted-foreground">{loadedFont.size} KB</span>
+          </Badge>
+          <span className="text-xs text-muted-foreground">Session only — not persisted</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FontSpecimen({ headingFamily, bodyFamily }: { headingFamily: string; bodyFamily: string }) {
+  const heading = headingFamily || "inherit";
+  const body = bodyFamily || "inherit";
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Font Specimens</CardTitle>
+        <CardDescription>
+          Sample text rendered with your current heading and body font selections.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Heading Font</span>
+            <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">{headingFamily || "system"}</code>
+          </div>
+          <div className="border rounded-lg p-5 bg-background space-y-2">
+            <p style={{ fontFamily: heading }} className="text-4xl font-bold kern-on leading-tight">
+              Lavender Dreams
+            </p>
+            <p style={{ fontFamily: heading }} className="text-2xl font-semibold kern-on">
+              Hand Poured Soy Candle
+            </p>
+            <p style={{ fontFamily: heading }} className="text-lg font-medium kern-on">
+              AVOCADO · WHEAT · LAVENDER
+            </p>
+            <p style={{ fontFamily: heading }} className="text-sm tracking-widest uppercase kern-on">
+              AV AW LT TA — Kerning Pairs
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Body Font</span>
+            <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">{bodyFamily || "system"}</code>
+          </div>
+          <div className="border rounded-lg p-5 bg-background space-y-3">
+            <p style={{ fontFamily: body }} className="text-base kern-on">
+              A blend of wild bergamot, warm cedar, and white sage — hand-poured in small batches.
+            </p>
+            <p style={{ fontFamily: body }} className="text-sm text-muted-foreground kern-on">
+              Net wt. 8 oz (226 g) · Burn time approx. 45–55 hours · Keep wick trimmed to ¼"
+            </p>
+            <p style={{ fontFamily: body }} className="text-xs kern-on">
+              Caution: Never leave a burning candle unattended. Keep away from flammable materials and out of reach of children and pets.
+            </p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function DesignSystem() {
   const { data: ds, isLoading } = useGetDesignSystem({ query: { queryKey: getGetDesignSystemQueryKey() } });
@@ -43,7 +245,7 @@ export default function DesignSystem() {
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Brand Settings</h1>
+        <h1 className="text-3xl font-bold tracking-tight kern-on">Brand Settings</h1>
         <p className="text-muted-foreground mt-1">Configure global styling and brand details for your labels.</p>
       </div>
 
@@ -128,19 +330,23 @@ export default function DesignSystem() {
             <Card>
               <CardHeader>
                 <CardTitle>Typography</CardTitle>
-                <CardDescription>Font families for your labels.</CardDescription>
+                <CardDescription>
+                  Font family names for your labels. Upload a custom font file to use it in this session, or enter any Google Font or system font name.
+                </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Heading Font</Label>
-                    <Input value={formData.headingFont || ''} onChange={e => setFormData({...formData, headingFont: e.target.value})} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Body Font</Label>
-                    <Input value={formData.bodyFont || ''} onChange={e => setFormData({...formData, bodyFont: e.target.value})} />
-                  </div>
-                </div>
+              <CardContent className="space-y-6">
+                <FontUploadCard
+                  slot="heading"
+                  label="Heading Font"
+                  currentFamily={formData.headingFont || ''}
+                  onFontLoaded={(family) => setFormData({ ...formData, headingFont: family })}
+                />
+                <FontUploadCard
+                  slot="body"
+                  label="Body Font"
+                  currentFamily={formData.bodyFont || ''}
+                  onFontLoaded={(family) => setFormData({ ...formData, bodyFont: family })}
+                />
               </CardContent>
             </Card>
 
@@ -152,7 +358,6 @@ export default function DesignSystem() {
           </form>
         </div>
 
-        {/* Live Preview Pane */}
         <div>
           <Card className="sticky top-20 overflow-hidden border-2">
             <div className="bg-muted/50 p-3 border-b text-xs font-medium text-center text-muted-foreground uppercase tracking-wider">
@@ -180,7 +385,7 @@ export default function DesignSystem() {
                   </div>
                 )}
                 <h3 
-                  className="font-bold text-sm tracking-widest uppercase mb-1"
+                  className="font-bold text-sm tracking-widest uppercase mb-1 kern-on"
                   style={{ fontFamily: formData.headingFont || 'sans-serif' }}
                 >
                   {formData.brandName || 'YOUR BRAND'}
@@ -192,7 +397,7 @@ export default function DesignSystem() {
                   Hand Poured Soy Candle
                 </div>
                 <h2 
-                  className="text-3xl mb-2 leading-none"
+                  className="text-3xl mb-2 leading-none kern-on"
                   style={{ fontFamily: formData.headingFont || 'sans-serif' }}
                 >
                   Meadow<br/>Frolic
@@ -210,6 +415,13 @@ export default function DesignSystem() {
           </Card>
         </div>
       </div>
+
+      <FontSpecimen
+        headingFamily={formData.headingFont || ''}
+        bodyFamily={formData.bodyFont || ''}
+      />
+
+      <KerningSpecimen />
     </div>
   );
 }

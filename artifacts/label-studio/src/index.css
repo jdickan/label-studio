@@ -68,6 +68,8 @@
 }
 
 :root {
+  --font-kerning: normal;
+
   --background: 40 10% 98%;
   --foreground: 220 10% 15%;
   
@@ -167,5 +169,30 @@
 
   body {
     @apply font-sans antialiased bg-background text-foreground;
+    font-kerning: var(--font-kerning, normal);
+    font-feature-settings: "kern" 1;
+    text-rendering: optimizeLegibility;
   }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-kerning: normal;
+    font-feature-settings: "kern" 1;
+  }
+
+  code, pre, kbd, samp,
+  .font-mono,
+  [class*="JetBrains"] {
+    font-kerning: none;
+    font-feature-settings: "kern" 0;
+  }
+}
+
+.kern-on {
+  font-kerning: normal;
+  font-feature-settings: "kern" 1;
+}
+
+.kern-off {
+  font-kerning: none;
+  font-feature-settings: "kern" 0;
 }

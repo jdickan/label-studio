@@ -26,6 +26,12 @@ export interface LabelSheet {
   /** Corner radius in inches (null or 0 = square corners) */
   cornerRadius?: number | null;
   isCustom: boolean;
+  /** When true, bleed and live-area guides are active for this sheet */
+  safeAreaEnabled: boolean;
+  /** Bleed margin in inches beyond the cut line */
+  bleedInches: number;
+  /** Text-safe margin in inches from the cut line inward */
+  safeAreaInches: number;
   createdAt: Date;
   updatedAt: Date;
 }

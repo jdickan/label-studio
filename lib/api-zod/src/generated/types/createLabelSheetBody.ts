@@ -24,4 +24,7 @@ export interface CreateLabelSheetBody {
   shape: CreateLabelSheetBodyShape;
   /** Corner radius in inches (null or 0 = square corners) */
   cornerRadius?: number | null;
+  safeAreaEnabled?: boolean;
+  bleedInches?: number;
+  safeAreaInches?: number;
 }

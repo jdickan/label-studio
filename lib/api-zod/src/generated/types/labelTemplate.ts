@@ -14,6 +14,9 @@ export interface LabelTemplate {
   labelSheetId?: number | null;
   zones: LabelTemplateZones;
   previewNotes?: string | null;
+  safeAreaEnabled: boolean;
+  bleedInches: number;
+  safeAreaInches: number;
   createdAt: Date;
   updatedAt: Date;
 }

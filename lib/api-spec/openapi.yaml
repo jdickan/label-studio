@@ -550,6 +550,15 @@ components:
           description: Corner radius in inches (null or 0 = square corners)
         isCustom:
           type: boolean
+        safeAreaEnabled:
+          type: boolean
+          description: When true, bleed and live-area guides are active for this sheet
+        bleedInches:
+          type: number
+          description: Bleed margin in inches beyond the cut line
+        safeAreaInches:
+          type: number
+          description: Text-safe margin in inches from the cut line inward
         createdAt:
           type: string
           format: date-time
@@ -573,6 +582,9 @@ components:
         - verticalGap
         - shape
         - isCustom
+        - safeAreaEnabled
+        - bleedInches
+        - safeAreaInches
         - createdAt
         - updatedAt
 
@@ -612,6 +624,12 @@ components:
           type: number
           nullable: true
           description: Corner radius in inches (null or 0 = square corners)
+        safeAreaEnabled:
+          type: boolean
+        bleedInches:
+          type: number
+        safeAreaInches:
+          type: number
       required:
         - name
         - brand
@@ -664,6 +682,12 @@ components:
           type: number
           nullable: true
           description: Corner radius in inches (null or 0 = square corners)
+        safeAreaEnabled:
+          type: boolean
+        bleedInches:
+          type: number
+        safeAreaInches:
+          type: number
 
     LabelTemplate:
       type: object
@@ -683,6 +707,12 @@ components:
         previewNotes:
           type: string
           nullable: true
+        safeAreaEnabled:
+          type: boolean
+        bleedInches:
+          type: number
+        safeAreaInches:
+          type: number
         createdAt:
           type: string
           format: date-time
@@ -693,6 +723,9 @@ components:
         - id
         - name
         - zones
+        - safeAreaEnabled
+        - bleedInches
+        - safeAreaInches
         - createdAt
         - updatedAt
 
@@ -709,6 +742,12 @@ components:
           type: object
         previewNotes:
           type: string
+        safeAreaEnabled:
+          type: boolean
+        bleedInches:
+          type: number
+        safeAreaInches:
+          type: number
       required:
         - name
         - zones
@@ -727,6 +766,12 @@ components:
           type: object
         previewNotes:
           type: string
+        safeAreaEnabled:
+          type: boolean
+        bleedInches:
+          type: number
+        safeAreaInches:
+          type: number
 
     DesignSystem:
       type: object

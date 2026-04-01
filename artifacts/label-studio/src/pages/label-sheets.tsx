@@ -31,8 +31,9 @@ import { useToast } from "@/hooks/use-toast";
 import { 
   Layers, Plus, Maximize, Grip, Trash2, Edit2, ZoomIn, Download,
   Upload, FileText, CheckCircle2, XCircle, AlertTriangle,
-  Loader2, ArrowRight, RotateCcw
+  Loader2, ArrowRight, RotateCcw, Crosshair
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 
 type LabelSheet = {
@@ -53,6 +54,9 @@ type LabelSheet = {
   shape: "rectangle" | "circle" | "oval";
   cornerRadius?: number | null;
   isCustom: boolean;
+  safeAreaEnabled?: boolean;
+  bleedInches?: number;
+  safeAreaInches?: number;
   updatedAt?: string | null;
 };
 
@@ -802,6 +806,9 @@ export default function LabelSheets() {
     verticalGap: 0,
     shape: "rectangle" as "rectangle" | "circle" | "oval",
     cornerRadius: null as number | null,
+    safeAreaEnabled: false,
+    bleedInches: 0.125,
+    safeAreaInches: 0.125,
   });
 
   const handleEdit = (sheet: LabelSheet) => {
@@ -821,6 +828,9 @@ export default function LabelSheets() {
       verticalGap: sheet.verticalGap,
       shape: sheet.shape,
       cornerRadius: sheet.cornerRadius ?? null,
+      safeAreaEnabled: sheet.safeAreaEnabled ?? false,
+      bleedInches: sheet.bleedInches ?? 0.125,
+      safeAreaInches: sheet.safeAreaInches ?? 0.125,
     });
     setEditingId(sheet.id);
     setIsDialogOpen(true);
@@ -843,6 +853,9 @@ export default function LabelSheets() {
       verticalGap: 0,
       shape: "rectangle",
       cornerRadius: null as number | null,
+      safeAreaEnabled: false,
+      bleedInches: 0.125,
+      safeAreaInches: 0.125,
     });
     setEditingId(null);
     setIsDialogOpen(true);
@@ -853,17 +866,20 @@ export default function LabelSheets() {
     const cr = formData.cornerRadius;
     const payload = {
       ...formData,
-      pageWidth:     Number(formData.pageWidth),
-      pageHeight:    Number(formData.pageHeight),
-      labelWidth:    Number(formData.labelWidth),
-      labelHeight:   Number(formData.labelHeight),
-      labelsAcross:  Number(formData.labelsAcross),
-      labelsDown:    Number(formData.labelsDown),
-      topMargin:     Number(formData.topMargin),
-      leftMargin:    Number(formData.leftMargin),
-      horizontalGap: Number(formData.horizontalGap),
-      verticalGap:   Number(formData.verticalGap),
-      cornerRadius:  (cr !== null && String(cr) !== "" && Number(cr) > 0) ? Number(cr) : null,
+      pageWidth:      Number(formData.pageWidth),
+      pageHeight:     Number(formData.pageHeight),
+      labelWidth:     Number(formData.labelWidth),
+      labelHeight:    Number(formData.labelHeight),
+      labelsAcross:   Number(formData.labelsAcross),
+      labelsDown:     Number(formData.labelsDown),
+      topMargin:      Number(formData.topMargin),
+      leftMargin:     Number(formData.leftMargin),
+      horizontalGap:  Number(formData.horizontalGap),
+      verticalGap:    Number(formData.verticalGap),
+      cornerRadius:   (cr !== null && String(cr) !== "" && Number(cr) > 0) ? Number(cr) : null,
+      safeAreaEnabled: formData.safeAreaEnabled,
+      bleedInches:    Number(formData.bleedInches),
+      safeAreaInches: Number(formData.safeAreaInches),
     };
 
     if (editingId) {
@@ -902,11 +918,16 @@ export default function LabelSheets() {
             <CardHeader className="bg-secondary/40 pb-4">
               <div className="flex justify-between items-start">
                 <div className="flex-1 min-w-0 pr-3">
-                  <div className="flex items-center gap-1.5 mb-2">
+                  <div className="flex items-center gap-1.5 mb-2 flex-wrap">
                     <Badge variant="outline" className="bg-background">{sheet.brand}</Badge>
                     {isNewSheet((sheet as LabelSheet).updatedAt) && (
                       <Badge className="bg-green-100 text-green-700 border-green-300 text-[10px] px-1.5 py-0 leading-4 font-semibold uppercase tracking-wide">
                         New
+                      </Badge>
+                    )}
+                    {(sheet as LabelSheet).safeAreaEnabled && (
+                      <Badge className="bg-blue-100 text-blue-700 border-blue-300 text-[10px] px-1.5 py-0 leading-4 font-semibold uppercase tracking-wide gap-1">
+                        <Crosshair className="w-2.5 h-2.5" /> SA
                       </Badge>
                     )}
                   </div>
@@ -1154,6 +1175,57 @@ export default function LabelSheets() {
               <div className="space-y-2">
                 <Label>Page Height (in)</Label>
                 <Input type="number" step="0.01" value={formData.pageHeight} onChange={e => setFormData({...formData, pageHeight: e.target.value as any})} required />
+              </div>
+
+              <div className="col-span-2 border-t pt-4 mt-2">
+                <div className="flex items-center justify-between mb-1">
+                  <h4 className="text-sm font-medium flex items-center gap-1.5">
+                    <Crosshair className="w-3.5 h-3.5 text-blue-500" />
+                    Print Safe Area &amp; Bleed
+                  </h4>
+                  <Switch
+                    checked={formData.safeAreaEnabled}
+                    onCheckedChange={(v) => setFormData({ ...formData, safeAreaEnabled: v })}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground mb-4">
+                  When on, visual guide overlays are shown in the template editor. Off by default.
+                </p>
+              </div>
+
+              <div className={cn("space-y-2 transition-opacity", !formData.safeAreaEnabled && "opacity-40 pointer-events-none")}>
+                <Label>
+                  Bleed (in)
+                  <span className="ml-1 text-muted-foreground font-normal text-xs">— extra ink beyond cut line</span>
+                </Label>
+                <Input
+                  type="number"
+                  step="0.0625"
+                  min="0"
+                  value={formData.bleedInches}
+                  onChange={e => setFormData({ ...formData, bleedInches: Number(e.target.value) })}
+                  disabled={!formData.safeAreaEnabled}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Typical: 0.125" (⅛"). = {(Number(formData.bleedInches) * 25.4).toFixed(2)} mm
+                </p>
+              </div>
+              <div className={cn("space-y-2 transition-opacity", !formData.safeAreaEnabled && "opacity-40 pointer-events-none")}>
+                <Label>
+                  Text Live Area (in)
+                  <span className="ml-1 text-muted-foreground font-normal text-xs">— safe margin from cut inward</span>
+                </Label>
+                <Input
+                  type="number"
+                  step="0.0625"
+                  min="0"
+                  value={formData.safeAreaInches}
+                  onChange={e => setFormData({ ...formData, safeAreaInches: Number(e.target.value) })}
+                  disabled={!formData.safeAreaEnabled}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Typical: 0.125" (⅛"). = {(Number(formData.safeAreaInches) * 25.4).toFixed(2)} mm
+                </p>
               </div>
             </div>
             <DialogFooter className="mt-6">

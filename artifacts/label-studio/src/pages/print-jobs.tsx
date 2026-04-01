@@ -367,11 +367,11 @@ export default function PrintJobs() {
                             }}
                           >
                             {label && (
-                              <>
+                              <div style={{ fontKerning: "normal", fontFeatureSettings: '"kern" 1', textRendering: "optimizeLegibility" }}>
                                 <div className="font-bold text-[10pt] leading-tight mb-1">{label.productName}</div>
                                 <div className="text-[8pt] text-gray-600 leading-tight mb-2">{label.productScentName}</div>
                                 <div className="text-[7pt] text-gray-400 mt-auto">{label.productSize}</div>
-                              </>
+                              </div>
                             )}
                           </div>
                         );

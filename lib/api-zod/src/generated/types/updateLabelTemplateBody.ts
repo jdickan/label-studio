@@ -13,4 +13,7 @@ export interface UpdateLabelTemplateBody {
   labelSheetId?: number | null;
   zones?: UpdateLabelTemplateBodyZones;
   previewNotes?: string;
+  safeAreaEnabled?: boolean;
+  bleedInches?: number;
+  safeAreaInches?: number;
 }

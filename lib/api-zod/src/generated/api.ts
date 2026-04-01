@@ -38,6 +38,17 @@ export const GetLabelSheetsResponseItem = zod.object({
     .nullish()
     .describe("Corner radius in inches (null or 0 = square corners)"),
   isCustom: zod.boolean(),
+  safeAreaEnabled: zod
+    .boolean()
+    .describe(
+      "When true, bleed and live-area guides are active for this sheet",
+    ),
+  bleedInches: zod
+    .number()
+    .describe("Bleed margin in inches beyond the cut line"),
+  safeAreaInches: zod
+    .number()
+    .describe("Text-safe margin in inches from the cut line inward"),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
 });
@@ -65,6 +76,9 @@ export const CreateLabelSheetBody = zod.object({
     .number()
     .nullish()
     .describe("Corner radius in inches (null or 0 = square corners)"),
+  safeAreaEnabled: zod.boolean().optional(),
+  bleedInches: zod.number().optional(),
+  safeAreaInches: zod.number().optional(),
 });
 
 /**
@@ -95,6 +109,17 @@ export const GetLabelSheetResponse = zod.object({
     .nullish()
     .describe("Corner radius in inches (null or 0 = square corners)"),
   isCustom: zod.boolean(),
+  safeAreaEnabled: zod
+    .boolean()
+    .describe(
+      "When true, bleed and live-area guides are active for this sheet",
+    ),
+  bleedInches: zod
+    .number()
+    .describe("Bleed margin in inches beyond the cut line"),
+  safeAreaInches: zod
+    .number()
+    .describe("Text-safe margin in inches from the cut line inward"),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
 });
@@ -125,6 +150,9 @@ export const UpdateLabelSheetBody = zod.object({
     .number()
     .nullish()
     .describe("Corner radius in inches (null or 0 = square corners)"),
+  safeAreaEnabled: zod.boolean().optional(),
+  bleedInches: zod.number().optional(),
+  safeAreaInches: zod.number().optional(),
 });
 
 export const UpdateLabelSheetResponse = zod.object({
@@ -148,6 +176,17 @@ export const UpdateLabelSheetResponse = zod.object({
     .nullish()
     .describe("Corner radius in inches (null or 0 = square corners)"),
   isCustom: zod.boolean(),
+  safeAreaEnabled: zod
+    .boolean()
+    .describe(
+      "When true, bleed and live-area guides are active for this sheet",
+    ),
+  bleedInches: zod
+    .number()
+    .describe("Bleed margin in inches beyond the cut line"),
+  safeAreaInches: zod
+    .number()
+    .describe("Text-safe margin in inches from the cut line inward"),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
 });
@@ -169,6 +208,9 @@ export const GetLabelTemplatesResponseItem = zod.object({
   labelSheetId: zod.number().nullish(),
   zones: zod.object({}).passthrough(),
   previewNotes: zod.string().nullish(),
+  safeAreaEnabled: zod.boolean(),
+  bleedInches: zod.number(),
+  safeAreaInches: zod.number(),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
 });
@@ -185,6 +227,9 @@ export const CreateLabelTemplateBody = zod.object({
   labelSheetId: zod.number().optional(),
   zones: zod.object({}).passthrough(),
   previewNotes: zod.string().optional(),
+  safeAreaEnabled: zod.boolean().optional(),
+  bleedInches: zod.number().optional(),
+  safeAreaInches: zod.number().optional(),
 });
 
 /**
@@ -201,6 +246,9 @@ export const GetLabelTemplateResponse = zod.object({
   labelSheetId: zod.number().nullish(),
   zones: zod.object({}).passthrough(),
   previewNotes: zod.string().nullish(),
+  safeAreaEnabled: zod.boolean(),
+  bleedInches: zod.number(),
+  safeAreaInches: zod.number(),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
 });
@@ -218,6 +266,9 @@ export const UpdateLabelTemplateBody = zod.object({
   labelSheetId: zod.number().nullish(),
   zones: zod.object({}).passthrough().optional(),
   previewNotes: zod.string().optional(),
+  safeAreaEnabled: zod.boolean().optional(),
+  bleedInches: zod.number().optional(),
+  safeAreaInches: zod.number().optional(),
 });
 
 export const UpdateLabelTemplateResponse = zod.object({
@@ -227,6 +278,9 @@ export const UpdateLabelTemplateResponse = zod.object({
   labelSheetId: zod.number().nullish(),
   zones: zod.object({}).passthrough(),
   previewNotes: zod.string().nullish(),
+  safeAreaEnabled: zod.boolean(),
+  bleedInches: zod.number(),
+  safeAreaInches: zod.number(),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
 });

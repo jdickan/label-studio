@@ -20,6 +20,9 @@ export const labelSheetsTable = pgTable("label_sheets", {
   shape: text("shape", { enum: ["rectangle", "circle", "oval"] }).notNull().default("rectangle"),
   cornerRadius: real("corner_radius"),
   isCustom: boolean("is_custom").notNull().default(false),
+  safeAreaEnabled: boolean("safe_area_enabled").notNull().default(false),
+  bleedInches: real("bleed_inches").notNull().default(0.125),
+  safeAreaInches: real("safe_area_inches").notNull().default(0.125),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

@@ -14,7 +14,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { LayoutTemplate, Plus, Save, Trash2 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { LayoutTemplate, Plus, Save, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function LabelTemplates() {
@@ -23,11 +24,15 @@ export default function LabelTemplates() {
   
   const [activeTemplate, setActiveTemplate] = useState<any>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
     labelSheetId: "none",
-    zones: {} as any
+    zones: {} as any,
+    safeAreaEnabled: false,
+    bleedInches: 0.125,
+    safeAreaInches: 0.125,
   });
 
   const queryClient = useQueryClient();
@@ -71,13 +76,18 @@ export default function LabelTemplates() {
       name: template.name,
       description: template.description || "",
       labelSheetId: template.labelSheetId ? template.labelSheetId.toString() : "none",
-      zones: template.zones || {}
+      zones: template.zones || {},
+      safeAreaEnabled: template.safeAreaEnabled ?? false,
+      bleedInches: template.bleedInches ?? 0.125,
+      safeAreaInches: template.safeAreaInches ?? 0.125,
     });
+    setAdvancedOpen(template.safeAreaEnabled ?? false);
   };
 
   const handleNewTemplate = () => {
     setActiveTemplate(null);
     setIsCreating(true);
+    setAdvancedOpen(false);
     setFormData({
       name: "New Template",
       description: "",
@@ -87,7 +97,10 @@ export default function LabelTemplates() {
         productName: { top: "30%", left: "5%", width: "90%", height: "15%", align: "center", fontSize: "16pt", bold: true },
         scentNotes: { top: "50%", left: "5%", width: "90%", height: "15%", align: "center", fontSize: "10pt" },
         weight: { top: "80%", left: "5%", width: "90%", height: "10%", align: "center", fontSize: "8pt" }
-      }
+      },
+      safeAreaEnabled: false,
+      bleedInches: 0.125,
+      safeAreaInches: 0.125,
     });
   };
 
@@ -96,7 +109,10 @@ export default function LabelTemplates() {
       name: formData.name,
       description: formData.description,
       labelSheetId: formData.labelSheetId === "none" ? undefined : parseInt(formData.labelSheetId),
-      zones: formData.zones
+      zones: formData.zones,
+      safeAreaEnabled: formData.safeAreaEnabled,
+      bleedInches: formData.bleedInches,
+      safeAreaInches: formData.safeAreaInches,
     };
 
     if (isCreating) {
@@ -112,8 +128,23 @@ export default function LabelTemplates() {
     scentNotes: "bg-purple-200 border-purple-400 text-purple-800",
     weight: "bg-orange-200 border-orange-400 text-orange-800",
     ingredients: "bg-yellow-200 border-yellow-400 text-yellow-800",
-    instructions: "bg-pink-200 border-pink-400 text-pink-800"
+    instructions: "bg-pink-200 border-pink-400 text-pink-800",
+    brandName: "bg-sky-200 border-sky-400 text-sky-800",
+    website: "bg-teal-200 border-teal-400 text-teal-800",
   };
+
+  const PREVIEW_W = 300;
+  const PREVIEW_H = 400;
+
+  const activeSheet = sheets?.find(s => s.id.toString() === formData.labelSheetId);
+
+  const pxPerInchW = activeSheet ? PREVIEW_W / activeSheet.labelWidth : PREVIEW_W / 3;
+  const pxPerInchH = activeSheet ? PREVIEW_H / activeSheet.labelHeight : PREVIEW_H / 4;
+
+  const bleedPxH = Math.round(formData.bleedInches * pxPerInchW);
+  const bleedPxV = Math.round(formData.bleedInches * pxPerInchH);
+  const safePxH = Math.round(formData.safeAreaInches * pxPerInchW);
+  const safePxV = Math.round(formData.safeAreaInches * pxPerInchH);
 
   return (
     <div className="space-y-6 h-[calc(100vh-120px)] flex flex-col animate-in fade-in duration-500">
@@ -144,8 +175,13 @@ export default function LabelTemplates() {
                   onClick={() => handleSelectTemplate(t)}
                   className={`w-full text-left px-3 py-2 text-sm rounded-md transition-colors flex items-center gap-2 ${activeTemplate?.id === t.id ? 'bg-primary/10 text-primary font-medium' : 'hover:bg-secondary'}`}
                 >
-                  <LayoutTemplate className="w-4 h-4 opacity-70" />
+                  <LayoutTemplate className="w-4 h-4 opacity-70 shrink-0" />
                   <span className="truncate">{t.name}</span>
+                  {t.safeAreaEnabled && (
+                    <span className="ml-auto shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">
+                      SA
+                    </span>
+                  )}
                 </button>
               ))
             )}
@@ -193,27 +229,90 @@ export default function LabelTemplates() {
               <div className="flex flex-1 overflow-hidden">
                 {/* Visualizer */}
                 <div className="flex-1 bg-secondary/30 p-8 flex items-center justify-center overflow-auto relative checkerboard-bg">
-                  <div className="w-[300px] h-[400px] bg-white shadow-xl relative border" style={{ borderRadius: '8px' }}>
-                    {Object.entries(formData.zones || {}).map(([key, zone]: [string, any]) => (
-                      <div 
-                        key={key}
-                        className={`absolute border border-dashed flex items-center justify-center text-xs font-medium bg-opacity-40 p-1 overflow-hidden ${zoneColors[key] || 'bg-gray-200 border-gray-400 text-gray-800'}`}
+                  <div className="relative">
+                    {/* Bleed guide — dashed red ring outside the label */}
+                    {formData.safeAreaEnabled && (
+                      <div
+                        className="absolute pointer-events-none"
                         style={{
-                          top: zone.top,
-                          left: zone.left,
-                          width: zone.width,
-                          height: zone.height,
-                          textAlign: (zone.align as any) || 'center',
-                          justifyContent: zone.align === 'left' ? 'flex-start' : zone.align === 'right' ? 'flex-end' : 'center',
+                          top: -bleedPxV,
+                          left: -bleedPxH,
+                          right: -bleedPxH,
+                          bottom: -bleedPxV,
+                          border: "1.5px dashed #ef4444",
+                          borderRadius: 8,
                         }}
+                        title={`Bleed: ${formData.bleedInches}"`}
                       >
-                        {key}
+                        <span
+                          className="absolute text-[9px] font-semibold text-red-500 bg-white/80 dark:bg-black/60 px-1 rounded leading-none"
+                          style={{ top: -1, left: "50%", transform: "translate(-50%, -50%)" }}
+                        >
+                          bleed {formData.bleedInches}"
+                        </span>
                       </div>
-                    ))}
+                    )}
+
+                    {/* Label canvas */}
+                    <div
+                      className="bg-white shadow-xl relative border"
+                      style={{ width: PREVIEW_W, height: PREVIEW_H, borderRadius: 8 }}
+                    >
+                      {Object.entries(formData.zones || {}).map(([key, zone]: [string, any]) => (
+                        <div 
+                          key={key}
+                          className={`absolute border border-dashed flex items-center justify-center text-xs font-medium bg-opacity-40 p-1 overflow-hidden ${zoneColors[key] || 'bg-gray-200 border-gray-400 text-gray-800'}`}
+                          style={{
+                            top: zone.top,
+                            left: zone.left,
+                            width: zone.width,
+                            height: zone.height,
+                            textAlign: (zone.align as any) || 'center',
+                            justifyContent: zone.align === 'left' ? 'flex-start' : zone.align === 'right' ? 'flex-end' : 'center',
+                          }}
+                        >
+                          {key}
+                        </div>
+                      ))}
+
+                      {/* Text live area guide — dashed blue ring inside the label */}
+                      {formData.safeAreaEnabled && (
+                        <div
+                          className="absolute pointer-events-none"
+                          style={{
+                            top: safePxV,
+                            left: safePxH,
+                            right: safePxH,
+                            bottom: safePxV,
+                            border: "1.5px dashed #3b82f6",
+                            borderRadius: 4,
+                          }}
+                          title={`Text live area: ${formData.safeAreaInches}" inset`}
+                        >
+                          <span
+                            className="absolute text-[9px] font-semibold text-blue-500 bg-white/80 dark:bg-black/60 px-1 rounded leading-none"
+                            style={{ bottom: -1, right: 4, transform: "translateY(50%)" }}
+                          >
+                            live {formData.safeAreaInches}"
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
+
+                  {formData.safeAreaEnabled && (
+                    <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-4 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1.5">
+                        <span className="inline-block w-4 h-0 border-t-2 border-dashed border-red-400" /> Bleed area
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <span className="inline-block w-4 h-0 border-t-2 border-dashed border-blue-400" /> Text live area
+                      </span>
+                    </div>
+                  )}
                 </div>
 
-                {/* Zones config (JSON for now per requirements, but rendered nicely) */}
+                {/* Right panel */}
                 <div className="w-80 border-l p-4 flex flex-col shrink-0 bg-card overflow-y-auto">
                   <h3 className="font-medium mb-4 flex items-center gap-2">
                     <LayoutTemplate className="w-4 h-4" /> Zone Configuration
@@ -222,7 +321,7 @@ export default function LabelTemplates() {
                     Define zones using JSON. Edit standard properties like top, left, width, height (%).
                   </p>
                   <Textarea 
-                    className="flex-1 font-mono text-xs min-h-[300px] resize-none p-4 bg-secondary/20"
+                    className="flex-1 font-mono text-xs min-h-[200px] resize-none p-4 bg-secondary/20"
                     value={JSON.stringify(formData.zones, null, 2)}
                     onChange={(e) => {
                       try {
@@ -241,6 +340,66 @@ export default function LabelTemplates() {
                       value={formData.description}
                       onChange={e => setFormData({...formData, description: e.target.value})}
                     />
+                  </div>
+
+                  {/* Advanced: Print Specifications */}
+                  <div className="mt-4 border rounded-md overflow-hidden">
+                    <button
+                      type="button"
+                      className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium bg-muted/30 hover:bg-muted/50 transition-colors"
+                      onClick={() => setAdvancedOpen(v => !v)}
+                    >
+                      <span>Print Specifications</span>
+                      {advancedOpen ? <ChevronUp className="w-4 h-4 opacity-60" /> : <ChevronDown className="w-4 h-4 opacity-60" />}
+                    </button>
+
+                    {advancedOpen && (
+                      <div className="px-3 py-3 space-y-4 bg-card">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <Label className="text-sm font-medium">Safe area guides</Label>
+                            <p className="text-xs text-muted-foreground mt-0.5">Show bleed and text live area overlays. Recommended for third-party printers.</p>
+                          </div>
+                          <Switch
+                            checked={formData.safeAreaEnabled}
+                            onCheckedChange={val => setFormData({...formData, safeAreaEnabled: val})}
+                          />
+                        </div>
+
+                        {formData.safeAreaEnabled && (
+                          <div className="space-y-3 pt-1">
+                            <div className="space-y-1.5">
+                              <Label className="text-xs flex items-center gap-1.5">
+                                <span className="inline-block w-3 h-0 border-t-2 border-dashed border-red-400" />
+                                Bleed <span className="text-muted-foreground font-normal">(outset from edge, inches)</span>
+                              </Label>
+                              <Input
+                                type="number"
+                                min="0"
+                                step="0.0625"
+                                className="h-8 text-sm font-mono"
+                                value={formData.bleedInches}
+                                onChange={e => setFormData({...formData, bleedInches: parseFloat(e.target.value) || 0})}
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label className="text-xs flex items-center gap-1.5">
+                                <span className="inline-block w-3 h-0 border-t-2 border-dashed border-blue-400" />
+                                Text live area <span className="text-muted-foreground font-normal">(inset from edge, inches)</span>
+                              </Label>
+                              <Input
+                                type="number"
+                                min="0"
+                                step="0.0625"
+                                className="h-8 text-sm font-mono"
+                                value={formData.safeAreaInches}
+                                onChange={e => setFormData({...formData, safeAreaInches: parseFloat(e.target.value) || 0})}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

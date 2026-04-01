@@ -41,6 +41,12 @@ export interface LabelSheet {
   /** Corner radius in inches (null or 0 = square corners) */
   cornerRadius?: number | null;
   isCustom: boolean;
+  /** When true, bleed and live-area guides are active for this sheet */
+  safeAreaEnabled: boolean;
+  /** Bleed margin in inches beyond the cut line */
+  bleedInches: number;
+  /** Text-safe margin in inches from the cut line inward */
+  safeAreaInches: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -71,6 +77,9 @@ export interface CreateLabelSheetBody {
   shape: CreateLabelSheetBodyShape;
   /** Corner radius in inches (null or 0 = square corners) */
   cornerRadius?: number | null;
+  safeAreaEnabled?: boolean;
+  bleedInches?: number;
+  safeAreaInches?: number;
 }
 
 export type UpdateLabelSheetBodyShape =
@@ -99,6 +108,9 @@ export interface UpdateLabelSheetBody {
   shape?: UpdateLabelSheetBodyShape;
   /** Corner radius in inches (null or 0 = square corners) */
   cornerRadius?: number | null;
+  safeAreaEnabled?: boolean;
+  bleedInches?: number;
+  safeAreaInches?: number;
 }
 
 export type LabelTemplateZones = { [key: string]: unknown };
@@ -110,6 +122,9 @@ export interface LabelTemplate {
   labelSheetId?: number | null;
   zones: LabelTemplateZones;
   previewNotes?: string | null;
+  safeAreaEnabled: boolean;
+  bleedInches: number;
+  safeAreaInches: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -122,6 +137,9 @@ export interface CreateLabelTemplateBody {
   labelSheetId?: number;
   zones: CreateLabelTemplateBodyZones;
   previewNotes?: string;
+  safeAreaEnabled?: boolean;
+  bleedInches?: number;
+  safeAreaInches?: number;
 }
 
 export type UpdateLabelTemplateBodyZones = { [key: string]: unknown };
@@ -132,6 +150,9 @@ export interface UpdateLabelTemplateBody {
   labelSheetId?: number | null;
   zones?: UpdateLabelTemplateBodyZones;
   previewNotes?: string;
+  safeAreaEnabled?: boolean;
+  bleedInches?: number;
+  safeAreaInches?: number;
 }
 
 export interface DesignSystem {

@@ -70,16 +70,17 @@ All routes prefixed with `/api`:
 - `/dashboard` — Overview stats, recent print jobs, products by type
 - `/products` — Product table with search/filter, CRUD, inline editing
 - `/label-sheets` — Sheet template browser (OnlineLabels + custom); "Upload Template PDF" button triggers SSE-streaming 12-step analysis modal
-- `/label-templates` — Layout zone editor with visual preview
+- `/label-templates` — Layout zone editor with visual preview; supports safe area guides (bleed + text live area overlays) as an advanced per-template setting. Templates with safe area enabled show an "SA" badge in the sidebar.
 - `/print-jobs` — Create/manage print batches, visual sheet preview, PDF/print
 - `/brand-settings` — Design system editor (colors, fonts, logo, contact info)
 
 ## Seeded Data
 
-- 10 OnlineLabels sheet templates: OL5225, OL1347, OL750, OL7850, OL775, OL800, OL875, OL5275, OL107, plus CandleBliss custom. All 6 PDF-verified OL templates have measurements extracted from PDF vector paths (not web-scraped). No Avery templates.
+- 7 label sheets: OL5225, OL1347, OL750, OL7850, OL775, OL800, OL875, plus CandleBliss custom (CB-4OZ-TIN). All PDF-verified OL templates have measurements extracted from PDF vector paths (not web-scraped). No Avery templates.
 - 5 sample products (3 soy candles, 1 room spray, 1 room diffuser)
 - 1 sample print job
 - Design system with "Bloom & Ember" branding defaults
+- 1 label template: "CandleBliss 4oz Tin Wrap" with safe area guides enabled (bleed 0.125", live area 0.125")
 
 ## PDF Template Analysis
 
