@@ -1,5 +1,7 @@
 # Label Production Workflow
 
+> Last verified against codebase: April 2026. Update this file when schema, routes, or feature behavior changes.
+
 This document explains the end-to-end pipeline from brand identity configuration through to a print job. The downloadable PDF currently contains sheet border geometry only (die-cut label outlines in two OCG layers); content-rendered print output is planned for a future release.
 
 ---

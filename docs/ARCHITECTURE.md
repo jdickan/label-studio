@@ -1,5 +1,7 @@
 # Architecture
 
+> Last verified against codebase: April 2026. If schema, routes, or artifact config change, update this file.
+
 ## Notes on Original Task Scope
 
 Two items mentioned in the original planning spec diverge from the current implementation and are documented here explicitly rather than in the original planned location:
@@ -32,13 +34,13 @@ All packages extend `tsconfig.base.json`. Library packages (`lib/*`) set `compos
 
 Replit routes incoming requests by path prefix. Each artifact registers a `previewPath`:
 
-| Artifact | Preview path | Local port |
+| Artifact | Preview path | Default local port |
 |---|---|---|
-| `api-server` | `/api` | 8080 |
-| `label-studio` | `/` (root) | 23804 |
-| `mockup-sandbox` | `/__mockup` | 8081 |
+| `api-server` | `/api` | 8080 (set via `PORT` env var injected by Replit) |
+| `label-studio` | `/` (root) | 23804 (set via `PORT` env var injected by Replit) |
+| `mockup-sandbox` | `/__mockup` | 8081 (set via `PORT` env var injected by Replit) |
 
-The frontend Vite dev server proxies `/api/*` requests to the API server. In production, Replit's routing handles the same via `artifact.toml`.
+Ports are runtime-configured by Replit via the `PORT` environment variable declared in each `artifact.toml`. The values above are the defaults defined there but are controlled by the platform. The frontend Vite dev server proxies `/api/*` requests to the API server. In production, Replit's path-based routing handles the same via `artifact.toml`.
 
 ---
 
