@@ -1,0 +1,1154 @@
+openapi: 3.1.0
+info:
+  title: Api
+  version: 0.1.0
+  description: Label Studio API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: labelSheets
+    description: Label sheet templates (Avery, OnlineLabels, etc.)
+  - name: labelTemplates
+    description: Label templates defining layout zones
+  - name: designSystem
+    description: Brand design system (fonts, colors, logo)
+  - name: products
+    description: Product catalog with label fields
+  - name: printJobs
+    description: Print job management
+  - name: dashboard
+    description: Dashboard summaries and stats
+
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  # ─── Label Sheet Templates ───────────────────────────────────────────────────
+  /label-sheets:
+    get:
+      operationId: getLabelSheets
+      tags: [labelSheets]
+      summary: List all label sheet templates
+      responses:
+        "200":
+          description: List of label sheet templates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LabelSheet"
+    post:
+      operationId: createLabelSheet
+      tags: [labelSheets]
+      summary: Create a custom label sheet template
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateLabelSheetBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LabelSheet"
+
+  /label-sheets/{id}:
+    get:
+      operationId: getLabelSheet
+      tags: [labelSheets]
+      summary: Get a label sheet template by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Label sheet template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LabelSheet"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updateLabelSheet
+      tags: [labelSheets]
+      summary: Update a label sheet template
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateLabelSheetBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LabelSheet"
+    delete:
+      operationId: deleteLabelSheet
+      tags: [labelSheets]
+      summary: Delete a label sheet template
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ─── Label Templates ──────────────────────────────────────────────────────────
+  /label-templates:
+    get:
+      operationId: getLabelTemplates
+      tags: [labelTemplates]
+      summary: List all label templates
+      responses:
+        "200":
+          description: List of label templates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LabelTemplate"
+    post:
+      operationId: createLabelTemplate
+      tags: [labelTemplates]
+      summary: Create a label template
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateLabelTemplateBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LabelTemplate"
+
+  /label-templates/{id}:
+    get:
+      operationId: getLabelTemplate
+      tags: [labelTemplates]
+      summary: Get a label template by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Label template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LabelTemplate"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updateLabelTemplate
+      tags: [labelTemplates]
+      summary: Update a label template
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateLabelTemplateBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LabelTemplate"
+    delete:
+      operationId: deleteLabelTemplate
+      tags: [labelTemplates]
+      summary: Delete a label template
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ─── Design System ────────────────────────────────────────────────────────────
+  /design-system:
+    get:
+      operationId: getDesignSystem
+      tags: [designSystem]
+      summary: Get the current brand design system
+      responses:
+        "200":
+          description: Design system settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DesignSystem"
+    patch:
+      operationId: updateDesignSystem
+      tags: [designSystem]
+      summary: Update brand design system settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateDesignSystemBody"
+      responses:
+        "200":
+          description: Updated design system
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DesignSystem"
+
+  # ─── Products ─────────────────────────────────────────────────────────────────
+  /products:
+    get:
+      operationId: getProducts
+      tags: [products]
+      summary: List all products
+      parameters:
+        - name: productType
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"
+    post:
+      operationId: createProduct
+      tags: [products]
+      summary: Create a product
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProductBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+
+  /products/{id}:
+    get:
+      operationId: getProduct
+      tags: [products]
+      summary: Get a product by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Product
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updateProduct
+      tags: [products]
+      summary: Update a product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProductBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+    delete:
+      operationId: deleteProduct
+      tags: [products]
+      summary: Delete a product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /products/bulk:
+    post:
+      operationId: bulkUpdateProducts
+      tags: [products]
+      summary: Bulk upsert products (for spreadsheet-style editing)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkUpdateProductsBody"
+      responses:
+        "200":
+          description: Upserted products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"
+
+  # ─── Print Jobs ───────────────────────────────────────────────────────────────
+  /print-jobs:
+    get:
+      operationId: getPrintJobs
+      tags: [printJobs]
+      summary: List all print jobs
+      responses:
+        "200":
+          description: List of print jobs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PrintJob"
+    post:
+      operationId: createPrintJob
+      tags: [printJobs]
+      summary: Create a new print job
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePrintJobBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrintJob"
+
+  /print-jobs/{id}:
+    get:
+      operationId: getPrintJob
+      tags: [printJobs]
+      summary: Get a print job by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Print job
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrintJob"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updatePrintJob
+      tags: [printJobs]
+      summary: Update a print job (e.g. change quantities)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePrintJobBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrintJob"
+    delete:
+      operationId: deletePrintJob
+      tags: [printJobs]
+      summary: Delete a print job
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ─── Dashboard / Stats ────────────────────────────────────────────────────────
+  /dashboard/stats:
+    get:
+      operationId: getDashboardStats
+      tags: [dashboard]
+      summary: Get dashboard summary statistics
+      responses:
+        "200":
+          description: Dashboard stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
+  /dashboard/recent-print-jobs:
+    get:
+      operationId: getRecentPrintJobs
+      tags: [dashboard]
+      summary: Get the 5 most recent print jobs
+      responses:
+        "200":
+          description: Recent print jobs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PrintJob"
+
+  /dashboard/products-by-type:
+    get:
+      operationId: getProductsByType
+      tags: [dashboard]
+      summary: Get product counts grouped by product type
+      responses:
+        "200":
+          description: Products by type breakdown
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProductTypeCount"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    # ── Label Sheet ──────────────────────────────────────────────────────────────
+    LabelSheet:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+          description: Human-readable name (e.g. "Avery 5160")
+        brand:
+          type: string
+          description: Brand name (e.g. "Avery", "OnlineLabels")
+        code:
+          type: string
+          description: Official product code (e.g. "5160", "OL875")
+        pageWidth:
+          type: number
+          description: Page width in inches
+        pageHeight:
+          type: number
+          description: Page height in inches
+        labelWidth:
+          type: number
+          description: Label width in inches
+        labelHeight:
+          type: number
+          description: Label height in inches
+        labelsAcross:
+          type: integer
+          description: Number of labels per row
+        labelsDown:
+          type: integer
+          description: Number of labels per column
+        topMargin:
+          type: number
+          description: Top margin in inches
+        leftMargin:
+          type: number
+          description: Left margin in inches
+        horizontalGap:
+          type: number
+          description: Gap between labels horizontally in inches
+        verticalGap:
+          type: number
+          description: Gap between labels vertically in inches
+        shape:
+          type: string
+          enum: [rectangle, circle, oval]
+          description: Label shape
+        isCustom:
+          type: boolean
+          description: Whether this was user-created
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - brand
+        - code
+        - pageWidth
+        - pageHeight
+        - labelWidth
+        - labelHeight
+        - labelsAcross
+        - labelsDown
+        - topMargin
+        - leftMargin
+        - horizontalGap
+        - verticalGap
+        - shape
+        - isCustom
+        - createdAt
+        - updatedAt
+
+    CreateLabelSheetBody:
+      type: object
+      properties:
+        name:
+          type: string
+        brand:
+          type: string
+        code:
+          type: string
+        pageWidth:
+          type: number
+        pageHeight:
+          type: number
+        labelWidth:
+          type: number
+        labelHeight:
+          type: number
+        labelsAcross:
+          type: integer
+        labelsDown:
+          type: integer
+        topMargin:
+          type: number
+        leftMargin:
+          type: number
+        horizontalGap:
+          type: number
+        verticalGap:
+          type: number
+        shape:
+          type: string
+          enum: [rectangle, circle, oval]
+      required:
+        - name
+        - brand
+        - code
+        - pageWidth
+        - pageHeight
+        - labelWidth
+        - labelHeight
+        - labelsAcross
+        - labelsDown
+        - topMargin
+        - leftMargin
+        - horizontalGap
+        - verticalGap
+        - shape
+
+    UpdateLabelSheetBody:
+      type: object
+      properties:
+        name:
+          type: string
+        brand:
+          type: string
+        code:
+          type: string
+        pageWidth:
+          type: number
+        pageHeight:
+          type: number
+        labelWidth:
+          type: number
+        labelHeight:
+          type: number
+        labelsAcross:
+          type: integer
+        labelsDown:
+          type: integer
+        topMargin:
+          type: number
+        leftMargin:
+          type: number
+        horizontalGap:
+          type: number
+        verticalGap:
+          type: number
+        shape:
+          type: string
+          enum: [rectangle, circle, oval]
+
+    # ── Label Template ────────────────────────────────────────────────────────────
+    LabelTemplate:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+          description: Template name (e.g. "Candle Label - Standard")
+        description:
+          type: ["string", "null"]
+        labelSheetId:
+          type: ["integer", "null"]
+          description: Associated label sheet template
+        labelSheet:
+          $ref: "#/components/schemas/LabelSheet"
+        zones:
+          type: object
+          description: JSON blob defining layout zones (logo, productName, scentNotes, productType, weight, location, ingredients, instructions)
+        previewNotes:
+          type: ["string", "null"]
+          description: Notes about this template
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - zones
+        - createdAt
+        - updatedAt
+
+    CreateLabelTemplateBody:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        labelSheetId:
+          type: integer
+        zones:
+          type: object
+        previewNotes:
+          type: string
+      required:
+        - name
+        - zones
+
+    UpdateLabelTemplateBody:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        labelSheetId:
+          type: ["integer", "null"]
+        zones:
+          type: object
+        previewNotes:
+          type: string
+
+    # ── Design System ─────────────────────────────────────────────────────────────
+    DesignSystem:
+      type: object
+      properties:
+        id:
+          type: integer
+        primaryColor:
+          type: string
+          description: Hex color string
+        secondaryColor:
+          type: string
+          description: Hex color string
+        accentColor:
+          type: string
+          description: Hex color string
+        backgroundColor:
+          type: string
+          description: Hex color string
+        textColor:
+          type: string
+          description: Hex color string
+        headingFont:
+          type: string
+          description: Font family name for headings
+        bodyFont:
+          type: string
+          description: Font family name for body text
+        logoUrl:
+          type: ["string", "null"]
+          description: URL to uploaded logo image
+        brandName:
+          type: string
+          description: Business/brand name
+        tagline:
+          type: ["string", "null"]
+          description: Optional brand tagline
+        websiteUrl:
+          type: ["string", "null"]
+        address:
+          type: ["string", "null"]
+          description: Business address for labels
+        phoneNumber:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - primaryColor
+        - secondaryColor
+        - accentColor
+        - backgroundColor
+        - textColor
+        - headingFont
+        - bodyFont
+        - brandName
+        - updatedAt
+
+    UpdateDesignSystemBody:
+      type: object
+      properties:
+        primaryColor:
+          type: string
+        secondaryColor:
+          type: string
+        accentColor:
+          type: string
+        backgroundColor:
+          type: string
+        textColor:
+          type: string
+        headingFont:
+          type: string
+        bodyFont:
+          type: string
+        logoUrl:
+          type: string
+        brandName:
+          type: string
+        tagline:
+          type: string
+        websiteUrl:
+          type: string
+        address:
+          type: string
+        phoneNumber:
+          type: string
+        email:
+          type: string
+
+    # ── Product ───────────────────────────────────────────────────────────────────
+    Product:
+      type: object
+      properties:
+        id:
+          type: integer
+        productType:
+          type: string
+          enum: [soy_candle, room_spray, room_diffuser, other]
+        name:
+          type: string
+          description: Product name (e.g. "Meadow Frolic")
+        scentName:
+          type: string
+          description: Scent name
+        scentNotes:
+          type: ["string", "null"]
+          description: Scent notes description (e.g. "Top: bergamot, Heart: jasmine, Base: sandalwood")
+        size:
+          type: string
+          description: Product size (e.g. "8 oz", "4 fl oz")
+        weight:
+          type: ["string", "null"]
+          description: Net weight for label (e.g. "Net Wt 8 oz (226g)")
+        ingredients:
+          type: ["string", "null"]
+          description: Full ingredients list
+        instructions:
+          type: ["string", "null"]
+          description: Usage/safety instructions
+        burnTime:
+          type: ["string", "null"]
+          description: For candles: burn time (e.g. "40-50 hours")
+        waxType:
+          type: ["string", "null"]
+          description: For candles: wax type (e.g. "100% Soy Wax")
+        location:
+          type: ["string", "null"]
+          description: Made in / location (e.g. "Made in Portland, OR")
+        warnings:
+          type: ["string", "null"]
+          description: Safety warnings for label
+        sku:
+          type: ["string", "null"]
+        isActive:
+          type: boolean
+        labelTemplateId:
+          type: ["integer", "null"]
+          description: Associated label template
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - productType
+        - name
+        - scentName
+        - size
+        - isActive
+        - createdAt
+        - updatedAt
+
+    CreateProductBody:
+      type: object
+      properties:
+        productType:
+          type: string
+          enum: [soy_candle, room_spray, room_diffuser, other]
+        name:
+          type: string
+        scentName:
+          type: string
+        scentNotes:
+          type: string
+        size:
+          type: string
+        weight:
+          type: string
+        ingredients:
+          type: string
+        instructions:
+          type: string
+        burnTime:
+          type: string
+        waxType:
+          type: string
+        location:
+          type: string
+        warnings:
+          type: string
+        sku:
+          type: string
+        isActive:
+          type: boolean
+        labelTemplateId:
+          type: integer
+      required:
+        - productType
+        - name
+        - scentName
+        - size
+
+    UpdateProductBody:
+      type: object
+      properties:
+        productType:
+          type: string
+          enum: [soy_candle, room_spray, room_diffuser, other]
+        name:
+          type: string
+        scentName:
+          type: string
+        scentNotes:
+          type: string
+        size:
+          type: string
+        weight:
+          type: string
+        ingredients:
+          type: string
+        instructions:
+          type: string
+        burnTime:
+          type: string
+        waxType:
+          type: string
+        location:
+          type: string
+        warnings:
+          type: string
+        sku:
+          type: string
+        isActive:
+          type: boolean
+        labelTemplateId:
+          type: ["integer", "null"]
+
+    BulkUpdateProductsBody:
+      type: object
+      properties:
+        products:
+          type: array
+          items:
+            $ref: "#/components/schemas/CreateProductBody"
+      required:
+        - products
+
+    # ── Print Job ─────────────────────────────────────────────────────────────────
+    PrintJobItem:
+      type: object
+      properties:
+        productId:
+          type: integer
+        quantity:
+          type: integer
+          description: Number of labels for this product
+        product:
+          $ref: "#/components/schemas/Product"
+      required:
+        - productId
+        - quantity
+
+    PrintJob:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+          description: Optional job name (e.g. "Saturday batch")
+        labelSheetId:
+          type: integer
+        labelSheet:
+          $ref: "#/components/schemas/LabelSheet"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PrintJobItem"
+        totalLabels:
+          type: integer
+          description: Total number of labels in the job
+        totalSheets:
+          type: integer
+          description: Number of sheets needed
+        status:
+          type: string
+          enum: [draft, ready, printed]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - labelSheetId
+        - items
+        - totalLabels
+        - totalSheets
+        - status
+        - createdAt
+        - updatedAt
+
+    CreatePrintJobBody:
+      type: object
+      properties:
+        name:
+          type: string
+        labelSheetId:
+          type: integer
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              productId:
+                type: integer
+              quantity:
+                type: integer
+            required:
+              - productId
+              - quantity
+        notes:
+          type: string
+      required:
+        - name
+        - labelSheetId
+        - items
+
+    UpdatePrintJobBody:
+      type: object
+      properties:
+        name:
+          type: string
+        labelSheetId:
+          type: integer
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              productId:
+                type: integer
+              quantity:
+                type: integer
+            required:
+              - productId
+              - quantity
+        notes:
+          type: string
+        status:
+          type: string
+          enum: [draft, ready, printed]
+
+    # ── Dashboard ─────────────────────────────────────────────────────────────────
+    DashboardStats:
+      type: object
+      properties:
+        totalProducts:
+          type: integer
+        activeProducts:
+          type: integer
+        totalLabelSheets:
+          type: integer
+        totalLabelTemplates:
+          type: integer
+        totalPrintJobs:
+          type: integer
+        labelsThisMonth:
+          type: integer
+        sheetsThisMonth:
+          type: integer
+      required:
+        - totalProducts
+        - activeProducts
+        - totalLabelSheets
+        - totalLabelTemplates
+        - totalPrintJobs
+        - labelsThisMonth
+        - sheetsThisMonth
+
+    ProductTypeCount:
+      type: object
+      properties:
+        productType:
+          type: string
+        count:
+          type: integer
+      required:
+        - productType
+        - count
