@@ -1,6 +1,6 @@
 # Label Production Workflow
 
-This document explains the end-to-end pipeline from brand identity configuration through to a finished print-ready PDF.
+This document explains the end-to-end pipeline from brand identity configuration through to a print job. The downloadable PDF currently contains sheet border geometry only (die-cut label outlines in two OCG layers); content-rendered print output is planned for a future release.
 
 ---
 
@@ -190,7 +190,7 @@ Each template can independently enable safe-area guides (`safeAreaEnabled`, `ble
 
 ### Advanced mode (JSON editor)
 
-The Label Templates page exposes a raw JSON textarea for the `zones` field. This is intended for power users who want to hand-craft zone definitions or paste in LLM-generated zone JSON. The visual zone editor (upload-driven workflow) is the primary interface for most users.
+The Label Templates page exposes a raw JSON textarea for the `zones` field alongside a live canvas preview. This is the current editing interface — users hand-craft zone definitions or paste in JSON directly. A visual upload-driven template designer (image-upload → LLM zone detection → interactive editor) is planned for a future task.
 
 ---
 
