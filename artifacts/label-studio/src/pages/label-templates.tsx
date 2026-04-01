@@ -1012,7 +1012,24 @@ export default function LabelTemplates() {
                         onBlur={() => {
                           try {
                             const parsed: unknown = JSON.parse(jsonText);
-                            if (Array.isArray(parsed)) setZones(parsed as LabelZone[]);
+                            if (!Array.isArray(parsed)) return;
+                            const validated = (parsed as Record<string, unknown>[]).filter(
+                              z => typeof z.id === "string" && typeof z.role === "string" &&
+                                   typeof z.x === "number" && typeof z.y === "number" &&
+                                   typeof z.w === "number" && typeof z.h === "number"
+                            ).map(z => withMaxChars({
+                              id: z.id as string,
+                              role: z.role as LabelZone["role"],
+                              text: typeof z.text === "string" ? z.text : "",
+                              x: Math.max(0, Math.min(1, z.x as number)),
+                              y: Math.max(0, Math.min(1, z.y as number)),
+                              w: Math.max(0.01, Math.min(1, z.w as number)),
+                              h: Math.max(0.01, Math.min(1, z.h as number)),
+                              color: typeof z.color === "string" ? z.color : "#ffffff",
+                              fontSize: typeof z.fontSize === "number" ? Math.max(6, Math.min(32, z.fontSize)) : 12,
+                              textAlign: (["left","center","right"].includes(z.textAlign as string) ? z.textAlign : "left") as "left"|"center"|"right",
+                            }));
+                            setZones(validated);
                           } catch { /* ignore while editing */ }
                         }}
                       />
