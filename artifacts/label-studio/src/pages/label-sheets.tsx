@@ -53,7 +53,15 @@ type LabelSheet = {
   shape: "rectangle" | "circle" | "oval";
   cornerRadius?: number | null;
   isCustom: boolean;
+  updatedAt?: string | null;
 };
+
+function isNewSheet(updatedAt?: string | null): boolean {
+  if (!updatedAt) return false;
+  const today = new Date();
+  const updated = new Date(updatedAt);
+  return updated.toDateString() === today.toDateString();
+}
 
 type ExtractedMeasurements = {
   code: string;
@@ -889,7 +897,14 @@ export default function LabelSheets() {
             <CardHeader className="bg-secondary/40 pb-4">
               <div className="flex justify-between items-start">
                 <div className="flex-1 min-w-0 pr-3">
-                  <Badge variant="outline" className="mb-2 bg-background">{sheet.brand}</Badge>
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <Badge variant="outline" className="bg-background">{sheet.brand}</Badge>
+                    {isNewSheet((sheet as LabelSheet).updatedAt) && (
+                      <Badge className="bg-green-100 text-green-700 border-green-300 text-[10px] px-1.5 py-0 leading-4 font-semibold uppercase tracking-wide">
+                        New
+                      </Badge>
+                    )}
+                  </div>
                   <CardTitle className="text-lg leading-snug">{sheet.name}</CardTitle>
                   <CardDescription className="font-mono mt-1">{sheet.code}</CardDescription>
                 </div>
