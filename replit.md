@@ -9,7 +9,7 @@ pnpm workspace monorepo using TypeScript. Label Studio — a label management ap
 - **Monorepo tool**: pnpm workspaces
 - **Node.js version**: 24
 - **Package manager**: pnpm
-- **TypeScript version**: 5.9 (strict-leaning flags; `composite: true` for `lib/*` packages only, not `artifacts/*`)
+- **TypeScript version**: 5.9 (strict-leaning individual flags; `composite: true` on `lib/db`, `lib/api-client-react`, `lib/api-zod` only — not on `lib/api-spec` or `artifacts/*`)
 - **API framework**: Express 5
 - **Database**: PostgreSQL + Drizzle ORM
 - **Validation**: Zod (`zod/v4`), `drizzle-zod`
@@ -51,7 +51,7 @@ label-studio/
 │   └── LABEL_SHEET_MEASUREMENT_PROTOCOL.md  # PDF extraction methodology
 ├── README.md
 ├── pnpm-workspace.yaml
-├── tsconfig.base.json      # Shared TS config (strict-leaning flags; lib/* add composite: true)
+├── tsconfig.base.json      # Shared TS config (strict-leaning flags; db/api-client-react/api-zod add composite: true)
 └── package.json
 ```
 
@@ -155,7 +155,7 @@ All routes prefixed with `/api`:
 
 ## TypeScript & Composite Projects
 
-Every package extends `tsconfig.base.json`. Library packages (`lib/*`) add `composite: true`; app packages (`artifacts/*`) use project references without `composite`. Run typechecks from root:
+Every package extends `tsconfig.base.json`. Three library packages (`lib/db`, `lib/api-client-react`, `lib/api-zod`) add `composite: true`. `lib/api-spec` has no tsconfig. `artifacts/api-server` and `artifacts/label-studio` use project `references`; `mockup-sandbox` and `scripts` do not. Run typechecks from root:
 - `pnpm run typecheck` — full workspace typecheck
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API client and Zod schemas from OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push Drizzle schema to DB
