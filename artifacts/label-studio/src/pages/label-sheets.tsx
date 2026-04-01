@@ -1055,15 +1055,15 @@ export default function LabelSheets() {
 
       {/* ── Create / Edit Modal ───────────────────────────────────────────────── */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader className="shrink-0">
             <DialogTitle>{editingId ? "Edit Label Sheet" : "New Custom Label Sheet"}</DialogTitle>
             <DialogDescription>
               Enter the exact measurements from the manufacturer's spec sheet. All measurements in inches.
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleSubmit}>
-            <div className="grid grid-cols-2 gap-x-6 gap-y-4 py-4">
+          <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+            <div className="grid grid-cols-2 gap-x-6 gap-y-4 py-4 overflow-y-auto flex-1 pr-1">
               <div className="col-span-2 md:col-span-1 space-y-2">
                 <Label>Brand/Manufacturer</Label>
                 <Input value={formData.brand} onChange={e => setFormData({...formData, brand: e.target.value})} required />
@@ -1228,7 +1228,7 @@ export default function LabelSheets() {
                 </p>
               </div>
             </div>
-            <DialogFooter className="mt-6">
+            <DialogFooter className="shrink-0 pt-4 mt-2 border-t">
               <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
               <Button type="submit">{editingId ? "Update Sheet" : "Create Sheet"}</Button>
             </DialogFooter>
