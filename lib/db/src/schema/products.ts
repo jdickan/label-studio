@@ -5,7 +5,7 @@ import { labelTemplatesTable } from "./labelTemplates";
 
 export const productsTable = pgTable("products", {
   id: serial("id").primaryKey(),
-  productType: text("product_type", { enum: ["soy_candle", "room_spray", "room_diffuser", "other"] }).notNull(),
+  productType: text("product_type").notNull(),
   name: text("name").notNull(),
   scentName: text("scent_name").notNull(),
   scentNotes: text("scent_notes"),

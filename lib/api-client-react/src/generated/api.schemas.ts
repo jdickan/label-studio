@@ -152,6 +152,10 @@ export interface LabelZone {
   textAlign: LabelZoneTextAlign;
   /** Approximate character capacity based on zone area and font size */
   maxChars: number;
+  /** Zone rotation in degrees (0, 90, 180, -90) */
+  rotation?: number;
+  /** Base64 data URL for photo-area / logo-area zones */
+  imageUrl?: string;
 }
 
 export type LabelZoneAnalysisResultBrandMatches = { [key: string]: string };

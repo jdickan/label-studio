@@ -22,9 +22,13 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import {
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
+import {
   LayoutTemplate, Plus, Save, Trash2, Upload, CheckCircle2,
   Circle, Loader2, ChevronDown, ChevronUp, AlertCircle, X,
   AlignLeft, AlignCenter, AlignRight, ImagePlus, Columns2,
+  Eye, RotateCcw,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -342,6 +346,8 @@ function ZoneCanvas({ zones, selectedId, onSelect, onChange, imageUrl, canvasW, 
                 width: zone.w * canvasW,
                 height: zone.h * canvasH,
                 backgroundColor: bgColor,
+                transform: zone.rotation ? `rotate(${zone.rotation}deg)` : undefined,
+                transformOrigin: "center",
               }}
               onClick={e => { e.stopPropagation(); if (!readOnly) onSelect(zone.id); }}
               onDoubleClick={e => {
@@ -354,8 +360,15 @@ function ZoneCanvas({ zones, selectedId, onSelect, onChange, imageUrl, canvasW, 
                 if (!readOnly && !isEditing) { onSelect(zone.id); startDrag(e, zone, "drag"); }
               }}
             >
-              {/* Photo/logo/decorative visual */}
-              {(zone.role === "photo-area" || zone.role === "logo-area") && (
+              {/* Photo/logo — uploaded image or crosshatch placeholder */}
+              {(zone.role === "photo-area" || zone.role === "logo-area") && zone.imageUrl && (
+                <img
+                  src={zone.imageUrl}
+                  alt="Zone image"
+                  className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+                />
+              )}
+              {(zone.role === "photo-area" || zone.role === "logo-area") && !zone.imageUrl && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                   <div
                     className="absolute inset-0 opacity-20"
@@ -575,6 +588,40 @@ function ZonePanel({ zone, onChange, onDelete, brandFields, designSystem }: Zone
         </>
       )}
 
+      {/* Photo/logo zone: image upload */}
+      {(zone.role === "photo-area" || zone.role === "logo-area") && (
+        <div className="space-y-1.5">
+          <Label className="text-xs">Zone image</Label>
+          {zone.imageUrl && (
+            <img src={zone.imageUrl} alt="Zone" className="w-full rounded border max-h-20 object-contain bg-muted/20" />
+          )}
+          <label className="block w-full cursor-pointer">
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={e => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = ev => update({ imageUrl: ev.target?.result as string });
+                reader.readAsDataURL(file);
+                e.target.value = "";
+              }}
+            />
+            <Button variant="outline" size="sm" className="w-full text-xs h-7 pointer-events-none" asChild>
+              <span><Upload className="w-3 h-3 mr-1" /> {zone.imageUrl ? "Replace image" : "Upload image"}</span>
+            </Button>
+          </label>
+          {zone.imageUrl && (
+            <Button variant="ghost" size="sm" className="w-full text-xs h-7 text-muted-foreground"
+              onClick={() => update({ imageUrl: undefined })}>
+              <X className="w-3 h-3 mr-1" /> Remove image
+            </Button>
+          )}
+        </div>
+      )}
+
       <div className="space-y-1.5">
         <Label className="text-xs">Zone background color</Label>
         {brandColorMatch && (
@@ -585,15 +632,31 @@ function ZonePanel({ zone, onChange, onDelete, brandFields, designSystem }: Zone
         <div className="flex gap-2 items-center">
           <input
             type="color"
-            value={zone.color}
+            value={zone.color || "#ffffff"}
             onChange={e => update({ color: e.target.value })}
             className="h-8 w-10 p-0.5 border rounded cursor-pointer"
           />
           <Input
             className="h-8 text-xs font-mono flex-1"
-            value={zone.color}
+            value={zone.color || "#ffffff"}
             onChange={e => update({ color: e.target.value })}
           />
+        </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label className="text-xs">Rotation</Label>
+        <div className="flex gap-1">
+          {([0, 90, 180, -90] as const).map(deg => (
+            <Button
+              key={deg} size="sm"
+              variant={(zone.rotation ?? 0) === deg ? "default" : "outline"}
+              className="h-7 flex-1 text-xs px-1"
+              onClick={() => update({ rotation: deg })}
+            >
+              {deg}°
+            </Button>
+          ))}
         </div>
       </div>
 
@@ -722,6 +785,7 @@ export default function LabelTemplates() {
   const [safeAreaEnabled, setSafeAreaEnabled] = useState(false);
   const [showAdvancedJson, setShowAdvancedJson] = useState(false);
   const [jsonText, setJsonText] = useState("");
+  const [showPreview, setShowPreview] = useState(false);
 
   const selectedZone = zones.find(z => z.id === selectedZoneId) ?? null;
 
@@ -893,9 +957,14 @@ export default function LabelTemplates() {
         </div>
         <div className="flex gap-2">
           {isEditing && (
-            <Button variant="outline" size="sm" onClick={handleAddZone}>
-              <Plus className="w-4 h-4 mr-1" /> Add Zone
-            </Button>
+            <>
+              <Button variant="outline" size="sm" onClick={() => setShowPreview(true)}>
+                <Eye className="w-4 h-4 mr-1" /> Preview
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleAddZone}>
+                <Plus className="w-4 h-4 mr-1" /> Add Zone
+              </Button>
+            </>
           )}
           <Button onClick={handleSave} disabled={isSaving || !isEditing}>
             <Save className="w-4 h-4 mr-2" />
@@ -1169,6 +1238,8 @@ export default function LabelTemplates() {
                               color: typeof z.color === "string" ? z.color : "#ffffff",
                               fontSize: typeof z.fontSize === "number" ? Math.max(6, Math.min(32, z.fontSize)) : 12,
                               textAlign: (["left","center","right"].includes(z.textAlign as string) ? z.textAlign : "left") as "left"|"center"|"right",
+                              rotation: typeof z.rotation === "number" ? z.rotation : 0,
+                              imageUrl: typeof z.imageUrl === "string" ? z.imageUrl : undefined,
                             }));
                             setZones(validated);
                           } catch { /* ignore while editing */ }
@@ -1182,6 +1253,52 @@ export default function LabelTemplates() {
           )}
         </div>
       </div>
+
+      {/* ── Label Preview Modal ─────────────────────────────────────────── */}
+      <Dialog open={showPreview} onOpenChange={setShowPreview}>
+        <DialogContent className="max-w-3xl w-[92vw] flex flex-col p-0 overflow-hidden gap-0">
+          <DialogHeader className="px-5 py-4 border-b">
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="w-4 h-4" /> Label Preview — {templateName}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-auto p-6 flex flex-col items-center justify-start gap-4 bg-muted/30">
+            <p className="text-xs text-muted-foreground text-center">
+              This is a WYSIWYG preview of your label zones. Text, colors and images are shown as configured.
+              {imageUrl && " Reference image shown at 35% opacity."}
+            </p>
+            {(() => {
+              const previewSheet = sheets?.find(s => s.id.toString() === previewSheetId) ||
+                                   sheets?.find(s => s.id.toString() === labelSheetId);
+              const maxW = 480;
+              const maxH = 360;
+              const ratio = previewSheet
+                ? Math.min(maxW / (previewSheet.labelWidth * 96), maxH / (previewSheet.labelHeight * 96))
+                : 1;
+              const pxW = previewSheet ? Math.round(previewSheet.labelWidth * 96 * ratio) : maxW;
+              const pxH = previewSheet ? Math.round(previewSheet.labelHeight * 96 * ratio) : maxH;
+              return (
+                <div className="flex flex-col items-center gap-2">
+                  {previewSheet && (
+                    <p className="text-[11px] text-muted-foreground">
+                      {previewSheet.name} · {previewSheet.labelWidth}" × {previewSheet.labelHeight}"
+                    </p>
+                  )}
+                  <ZoneCanvas
+                    zones={zones}
+                    selectedId={null}
+                    onSelect={() => {}}
+                    imageUrl={imageUrl}
+                    canvasW={pxW}
+                    canvasH={pxH}
+                    readOnly
+                  />
+                </div>
+              );
+            })()}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <style>{`
         .checkerboard-bg {

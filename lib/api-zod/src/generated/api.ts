@@ -353,6 +353,14 @@ export const AnalyzeLabelTemplateResponse = zod.object({
         .describe(
           "Approximate character capacity based on zone area and font size",
         ),
+      rotation: zod
+        .number()
+        .optional()
+        .describe("Zone rotation in degrees (0, 90, 180, -90)"),
+      imageUrl: zod
+        .string()
+        .optional()
+        .describe("Base64 data URL for photo-area \/ logo-area zones"),
     }),
   ),
   brandMatches: zod.record(zod.string(), zod.string()),

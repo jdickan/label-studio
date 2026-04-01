@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { 
   useGetProducts, 
   useCreateProduct, 
@@ -59,6 +59,13 @@ export default function Products() {
     { query: { search: search || undefined, productType: typeFilter !== "all" ? typeFilter : undefined } },
     { query: { queryKey: getGetProductsQueryKey({ search: search || undefined, productType: typeFilter !== "all" ? typeFilter : undefined }) } }
   );
+
+  const { data: allProducts } = useGetProducts({}, { query: { queryKey: getGetProductsQueryKey() } });
+  const uniqueProductTypes = useMemo(() => {
+    const types = new Set<string>(["soy_candle", "room_spray", "room_diffuser"]);
+    allProducts?.forEach(p => { if (p.productType) types.add(p.productType); });
+    return Array.from(types).sort();
+  }, [allProducts]);
 
   const { data: templates } = useGetLabelTemplates({ query: { queryKey: ["labelTemplates"] } });
 
@@ -159,7 +166,7 @@ export default function Products() {
     e.preventDefault();
     const payload = {
       ...formData,
-      productType: formData.productType as "soy_candle" | "room_spray" | "room_diffuser" | "other",
+      productType: formData.productType,
       labelTemplateId: formData.labelTemplateId === "none" ? undefined : parseInt(formData.labelTemplateId)
     };
 
@@ -205,9 +212,9 @@ export default function Products() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Types</SelectItem>
-              <SelectItem value="soy_candle">Soy Candle</SelectItem>
-              <SelectItem value="room_spray">Room Spray</SelectItem>
-              <SelectItem value="room_diffuser">Room Diffuser</SelectItem>
+              {uniqueProductTypes.map(t => (
+                <SelectItem key={t} value={t}>{formatProductType(t)}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -297,20 +304,19 @@ export default function Products() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Product Type</Label>
-                  <Select 
-                    value={formData.productType} 
-                    onValueChange={(val) => setFormData({...formData, productType: val})}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="soy_candle">Soy Candle</SelectItem>
-                      <SelectItem value="room_spray">Room Spray</SelectItem>
-                      <SelectItem value="room_diffuser">Room Diffuser</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Input
+                    list="product-type-suggestions"
+                    value={formData.productType}
+                    onChange={e => setFormData({...formData, productType: e.target.value})}
+                    placeholder="e.g. soy_candle, room_spray…"
+                    className="text-sm"
+                    required
+                  />
+                  <datalist id="product-type-suggestions">
+                    {["soy_candle", "room_spray", "room_diffuser", "beeswax_candle", "gel_candle", "reed_diffuser", "car_freshener", "bath_bomb", "other"]
+                      .map(v => <option key={v} value={v} />)}
+                  </datalist>
+                  <p className="text-[10px] text-muted-foreground">Type any value or pick a suggestion</p>
                 </div>
                 <div className="space-y-2">
                   <Label>Status</Label>

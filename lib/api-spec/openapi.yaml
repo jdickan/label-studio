@@ -761,6 +761,12 @@ components:
         maxChars:
           type: integer
           description: Approximate character capacity based on zone area and font size
+        rotation:
+          type: number
+          description: Zone rotation in degrees (0, 90, 180, -90)
+        imageUrl:
+          type: string
+          description: Base64 data URL for photo-area / logo-area zones
       required:
         - id
         - role

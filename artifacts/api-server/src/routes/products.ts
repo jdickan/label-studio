@@ -16,7 +16,7 @@ router.get("/", async (req, res) => {
   try {
     const { productType, search } = GetProductsQueryParams.parse(req.query);
     const conditions: SQL[] = [];
-    if (productType) conditions.push(eq(productsTable.productType, productType as "soy_candle" | "room_spray" | "room_diffuser" | "other"));
+    if (productType) conditions.push(eq(productsTable.productType, productType));
     if (search) conditions.push(ilike(productsTable.name, `%${search}%`));
     const products = await db.select().from(productsTable)
       .where(conditions.length > 0 ? and(...conditions) : undefined)
