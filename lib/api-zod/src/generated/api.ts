@@ -215,6 +215,12 @@ export const GetLabelTemplatesResponseItem = zod.object({
   safeAreaEnabled: zod.boolean(),
   bleedInches: zod.number(),
   safeAreaInches: zod.number(),
+  labelBgColor: zod
+    .string()
+    .nullish()
+    .describe(
+      "CSS colour for the label canvas background (null \/ empty = transparent)",
+    ),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
 });
@@ -238,6 +244,7 @@ export const CreateLabelTemplateBody = zod.object({
   safeAreaEnabled: zod.boolean().optional(),
   bleedInches: zod.number().optional(),
   safeAreaInches: zod.number().optional(),
+  labelBgColor: zod.string().nullish(),
 });
 
 /**
@@ -261,6 +268,12 @@ export const GetLabelTemplateResponse = zod.object({
   safeAreaEnabled: zod.boolean(),
   bleedInches: zod.number(),
   safeAreaInches: zod.number(),
+  labelBgColor: zod
+    .string()
+    .nullish()
+    .describe(
+      "CSS colour for the label canvas background (null \/ empty = transparent)",
+    ),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
 });
@@ -286,6 +299,7 @@ export const UpdateLabelTemplateBody = zod.object({
   safeAreaEnabled: zod.boolean().optional(),
   bleedInches: zod.number().optional(),
   safeAreaInches: zod.number().optional(),
+  labelBgColor: zod.string().nullish(),
 });
 
 export const UpdateLabelTemplateResponse = zod.object({
@@ -302,6 +316,12 @@ export const UpdateLabelTemplateResponse = zod.object({
   safeAreaEnabled: zod.boolean(),
   bleedInches: zod.number(),
   safeAreaInches: zod.number(),
+  labelBgColor: zod
+    .string()
+    .nullish()
+    .describe(
+      "CSS colour for the label canvas background (null \/ empty = transparent)",
+    ),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
 });

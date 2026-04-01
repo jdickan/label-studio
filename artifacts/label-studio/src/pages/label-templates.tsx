@@ -236,7 +236,6 @@ function DropzoneArea({ onFile }: { onFile: (f: File) => void }) {
         className="hidden"
         onChange={e => { const f = e.target.files?.[0]; if (f) onFile(f); e.target.value = ""; }}
       />
-      <p className="text-xs text-muted-foreground/60 mt-4">Or start with a blank template below</p>
     </div>
   );
 }
@@ -272,6 +271,7 @@ type ZoneCanvasProps = {
   selectedId: string | null;
   onSelect: (id: string | null) => void;
   onChange?: (zones: LabelZone[]) => void;
+  onBeforeDrag?: () => void;
   imageUrl?: string;
   canvasW: number;
   canvasH: number;
@@ -281,9 +281,10 @@ type ZoneCanvasProps = {
   bodyFont?: string;
   showTextSafe?: boolean;
   showImageSafe?: boolean;
+  labelBgColor?: string | null;
 };
 
-function ZoneCanvas({ zones, selectedId, onSelect, onChange, imageUrl, canvasW, canvasH, readOnly, label, headingFont, bodyFont, showTextSafe, showImageSafe }: ZoneCanvasProps) {
+function ZoneCanvas({ zones, selectedId, onSelect, onChange, onBeforeDrag, imageUrl, canvasW, canvasH, readOnly, label, headingFont, bodyFont, showTextSafe, showImageSafe, labelBgColor }: ZoneCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [editingZoneId, setEditingZoneId] = useState<string | null>(null);
   const dragState = useRef<{
@@ -299,9 +300,10 @@ function ZoneCanvas({ zones, selectedId, onSelect, onChange, imageUrl, canvasW, 
     if (readOnly || editingZoneId === zone.id) return;
     e.stopPropagation();
     e.currentTarget.setPointerCapture(e.pointerId);
+    onBeforeDrag?.();
     const canvasRect = containerRef.current!.getBoundingClientRect();
     dragState.current = { type, zoneId: zone.id, startClientX: e.clientX, startClientY: e.clientY, startZone: { ...zone }, canvasRect };
-  }, [readOnly, editingZoneId]);
+  }, [readOnly, editingZoneId, onBeforeDrag]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
     const ds = dragState.current;
@@ -352,7 +354,7 @@ function ZoneCanvas({ zones, selectedId, onSelect, onChange, imageUrl, canvasW, 
       <div
         ref={containerRef}
         className="relative shadow-2xl select-none overflow-hidden rounded-sm"
-        style={{ width: canvasW, height: canvasH, background: "#f8f6f2" }}
+        style={{ width: canvasW, height: canvasH, background: labelBgColor || "transparent" }}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onClick={() => { if (!readOnly) { onSelect(null); setEditingZoneId(null); } }}
@@ -380,8 +382,11 @@ function ZoneCanvas({ zones, selectedId, onSelect, onChange, imageUrl, canvasW, 
           const hasText = !NO_TEXT_ROLES.includes(zone.role);
           const roleLabel = ZONE_ROLES.find(r => r.value === zone.role)?.label ?? zone.role;
           const charRatio = zone.text ? zone.text.length / zone.maxChars : 0;
-          const bgColor = zone.color || "#ffffff";
-          const fgColor = getContrastColor(bgColor);
+          const isZoneTransparent = !zone.color || zone.color === "transparent";
+          const bgColor = isZoneTransparent ? "transparent" : zone.color;
+          const fgColor = isZoneTransparent
+            ? getContrastColor(labelBgColor || "#ffffff")
+            : getContrastColor(zone.color);
           const pxFont = Math.max(7, zone.fontSize * (canvasH / 260));
           const pad = Math.max(3, pxFont * 0.25);
           const zoneFontFamily = HEADING_ROLES.has(zone.role)
@@ -734,16 +739,36 @@ function ZonePanel({ zone, onChange, onDelete, brandFields, designSystem }: Zone
           </Badge>
         )}
         <div className="flex gap-2 items-center">
+          <button
+            type="button"
+            title="Set zone background to transparent"
+            onClick={() => update({ color: "" })}
+            className={cn(
+              "h-8 w-10 shrink-0 border rounded flex items-center justify-center text-[10px] font-medium transition-colors",
+              (!zone.color || zone.color === "transparent")
+                ? "bg-foreground text-background border-foreground"
+                : "text-muted-foreground hover:bg-muted checkerboard-swatch"
+            )}
+            style={(!zone.color || zone.color === "transparent") ? {} : {
+              backgroundImage: "linear-gradient(45deg,#e5e7eb 25%,transparent 25%),linear-gradient(-45deg,#e5e7eb 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#e5e7eb 75%),linear-gradient(-45deg,transparent 75%,#e5e7eb 75%)",
+              backgroundSize: "6px 6px",
+              backgroundPosition: "0 0,0 3px,3px -3px,-3px 0",
+            }}
+          >
+            {(!zone.color || zone.color === "transparent") ? "None" : ""}
+          </button>
           <input
             type="color"
-            value={zone.color || "#ffffff"}
+            value={(!zone.color || zone.color === "transparent") ? "#ffffff" : zone.color}
             onChange={e => update({ color: e.target.value })}
             className="h-8 w-10 p-0.5 border rounded cursor-pointer"
+            disabled={!zone.color || zone.color === "transparent"}
           />
           <Input
             className="h-8 text-xs font-mono flex-1"
-            value={zone.color || "#ffffff"}
+            value={(!zone.color || zone.color === "transparent") ? "transparent" : zone.color}
             onChange={e => update({ color: e.target.value })}
+            disabled={!zone.color || zone.color === "transparent"}
           />
         </div>
       </div>
@@ -891,6 +916,26 @@ export default function LabelTemplates() {
   const [showAdvancedJson, setShowAdvancedJson] = useState(false);
   const [jsonText, setJsonText] = useState("");
   const [showPreview, setShowPreview] = useState(false);
+  const [labelBgColor, setLabelBgColor] = useState<string>("");
+
+  const undoRef = useRef<LabelZone[] | null>(null);
+  const saveUndo = useCallback(() => {
+    undoRef.current = zones;
+  }, [zones]);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey) {
+        if (undoRef.current !== null) {
+          e.preventDefault();
+          setZones(undoRef.current);
+          undoRef.current = null;
+        }
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
 
   const selectedZone = zones.find(z => z.id === selectedZoneId) ?? null;
 
@@ -930,8 +975,10 @@ export default function LabelTemplates() {
     setLabelSheetId(t.labelSheetId?.toString() ?? "none");
     setShowImageSafe(t.safeAreaEnabled ?? false);
     setShowTextSafe(t.safeAreaEnabled ?? false);
+    setLabelBgColor(t.labelBgColor ?? "");
     setImageUrl(undefined);
     setSelectedZoneId(null);
+    undoRef.current = null;
     const rawZones = t.zones;
     if (isZoneArray(rawZones)) {
       setZones(rawZones as LabelZone[]);
@@ -950,8 +997,10 @@ export default function LabelTemplates() {
     setLabelSheetId("none");
     setShowImageSafe(false);
     setShowTextSafe(false);
+    setLabelBgColor("");
     setImageUrl(undefined);
     setSelectedZoneId(null);
+    undoRef.current = null;
     setZones([
       withMaxChars({ id: crypto.randomUUID(), role: "brand-name",    text: designSystem?.brandName ?? "", x: 0.03, y: 0.03, w: 0.45, h: 0.12, color: "#ffffff", fontSize: 8,  textAlign: "left"   }),
       withMaxChars({ id: crypto.randomUUID(), role: "product-name",  text: "",                             x: 0.03, y: 0.18, w: 0.45, h: 0.30, color: "#ffffff", fontSize: 18, textAlign: "left"   }),
@@ -1031,6 +1080,7 @@ export default function LabelTemplates() {
       labelSheetId: labelSheetId === "none" ? undefined : parseInt(labelSheetId),
       zones: zonesWithMaxChars as unknown,
       safeAreaEnabled: showImageSafe || showTextSafe,
+      labelBgColor: labelBgColor || null,
     };
     if (activeTemplateId) {
       updateMutation.mutate({ id: activeTemplateId, data: payload });
@@ -1040,19 +1090,31 @@ export default function LabelTemplates() {
   };
 
   const handleAddZone = () => {
+    saveUndo();
     const z = newZone(crypto.randomUUID());
     setZones(prev => [...prev, z]);
     setSelectedZoneId(z.id);
   };
 
   const handleDeleteZone = (id: string) => {
+    saveUndo();
     setZones(prev => prev.filter(z => z.id !== id));
     setSelectedZoneId(null);
   };
 
   const handleUpdateZone = useCallback((updated: LabelZone) => {
+    saveUndo();
     setZones(prev => prev.map(z => z.id === updated.id ? withMaxChars(updated) : z));
-  }, []);
+  }, [saveUndo]);
+
+  const handleCancel = () => {
+    setMode("idle");
+    setActiveTemplateId(null);
+    setZones([]);
+    setSelectedZoneId(null);
+    setImageUrl(undefined);
+    undoRef.current = null;
+  };
 
   return (
     <div className="flex flex-col h-[calc(100vh-120px)] animate-in fade-in duration-500">
@@ -1083,15 +1145,6 @@ export default function LabelTemplates() {
       <div className="flex flex-1 gap-4 min-h-0">
         {/* Sidebar */}
         <div className="w-56 shrink-0 flex flex-col gap-2 overflow-y-auto">
-          <button
-            className={cn(
-              "w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed text-sm transition-colors",
-              "hover:bg-primary/5 hover:border-primary/40 text-muted-foreground hover:text-foreground"
-            )}
-            onClick={startNewBlank}
-          >
-            <Plus className="w-4 h-4" /> Blank template
-          </button>
 
           {isLoading ? (
             <div className="text-center text-xs text-muted-foreground p-4 animate-pulse">Loading…</div>
@@ -1107,20 +1160,27 @@ export default function LabelTemplates() {
         {/* Main content area */}
         <div className="flex-1 min-h-0 flex flex-col overflow-hidden rounded-lg border bg-card">
           {mode === "idle" && (
-            <div className="flex-1 flex flex-col items-center justify-center p-10">
-              <div className="max-w-md w-full">
-                <div className="text-center mb-8">
-                  <LayoutTemplate className="w-12 h-12 mx-auto mb-4 text-muted-foreground/30" />
-                  <h2 className="text-xl font-semibold mb-2">Design your label layout</h2>
-                  <p className="text-sm text-muted-foreground">
-                    Upload an existing label image or PDF and we'll detect zones automatically, or start blank.
-                  </p>
-                </div>
-                <DropzoneArea onFile={runAnalysis} />
-                <div className="mt-4 text-center">
-                  <Button variant="ghost" size="sm" onClick={startNewBlank}>
-                    Start with blank template instead
-                  </Button>
+            <div className="flex-1 flex items-center justify-center p-8">
+              <div className="w-full max-w-2xl grid grid-cols-2 gap-5">
+                {/* Start from scratch */}
+                <button
+                  type="button"
+                  onClick={startNewBlank}
+                  className="group flex flex-col items-center justify-center gap-4 p-8 rounded-xl border-2 border-dashed text-center transition-all hover:border-primary/50 hover:bg-primary/5 cursor-pointer"
+                >
+                  <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center group-hover:bg-primary/10 transition-colors">
+                    <LayoutTemplate className="w-7 h-7 text-muted-foreground group-hover:text-primary transition-colors" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-base">Design from scratch</p>
+                    <p className="text-sm text-muted-foreground mt-1">Start with a blank canvas and build your zone layout manually.</p>
+                  </div>
+                  <span className="text-xs font-medium text-primary group-hover:underline">Open blank template →</span>
+                </button>
+
+                {/* Upload design */}
+                <div className="flex flex-col gap-3">
+                  <DropzoneArea onFile={runAnalysis} />
                 </div>
               </div>
             </div>
@@ -1209,6 +1269,12 @@ export default function LabelTemplates() {
                   </Select>
                 </div>
 
+                <Button
+                  variant="ghost" size="sm" className="h-8 shrink-0 text-muted-foreground hover:text-foreground"
+                  onClick={handleCancel}
+                >
+                  Cancel
+                </Button>
                 {activeTemplateId && (
                   <Button
                     variant="ghost" size="icon" className="h-8 w-8 shrink-0 text-destructive hover:bg-destructive/10"
@@ -1229,6 +1295,7 @@ export default function LabelTemplates() {
                         selectedId={selectedZoneId}
                         onSelect={setSelectedZoneId}
                         onChange={setZones}
+                        onBeforeDrag={saveUndo}
                         imageUrl={imageUrl}
                         canvasW={mainCanvasW}
                         canvasH={mainCanvasH}
@@ -1237,6 +1304,7 @@ export default function LabelTemplates() {
                         bodyFont={designSystem?.bodyFont}
                         showImageSafe={showImageSafe}
                         showTextSafe={showTextSafe}
+                        labelBgColor={labelBgColor}
                       />
                       {isSideBySide && previewSheet && (
                         <ZoneCanvas
@@ -1251,6 +1319,7 @@ export default function LabelTemplates() {
                           bodyFont={designSystem?.bodyFont}
                           showImageSafe={showImageSafe}
                           showTextSafe={showTextSafe}
+                          labelBgColor={labelBgColor}
                         />
                       )}
                     </div>
@@ -1283,6 +1352,44 @@ export default function LabelTemplates() {
                           value={templateDescription}
                           onChange={e => setTemplateDescription(e.target.value)}
                         />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Label Background</Label>
+                        <div className="flex gap-2 items-center">
+                          <button
+                            type="button"
+                            title="No background (transparent)"
+                            onClick={() => setLabelBgColor("")}
+                            className={cn(
+                              "h-8 w-10 shrink-0 border rounded flex items-center justify-center text-[10px] font-medium transition-colors",
+                              !labelBgColor
+                                ? "bg-foreground text-background border-foreground"
+                                : "text-muted-foreground hover:bg-muted"
+                            )}
+                            style={labelBgColor ? {
+                              backgroundImage: "linear-gradient(45deg,#e5e7eb 25%,transparent 25%),linear-gradient(-45deg,#e5e7eb 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#e5e7eb 75%),linear-gradient(-45deg,transparent 75%,#e5e7eb 75%)",
+                              backgroundSize: "6px 6px",
+                              backgroundPosition: "0 0,0 3px,3px -3px,-3px 0",
+                            } : {}}
+                          >
+                            {!labelBgColor ? "None" : ""}
+                          </button>
+                          <input
+                            type="color"
+                            value={labelBgColor || "#ffffff"}
+                            onChange={e => setLabelBgColor(e.target.value)}
+                            className="h-8 w-10 p-0.5 border rounded cursor-pointer"
+                            title="Pick a label background color"
+                          />
+                          <Input
+                            className="h-8 text-xs font-mono flex-1"
+                            value={labelBgColor || ""}
+                            placeholder="transparent"
+                            onChange={e => setLabelBgColor(e.target.value)}
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground">The canvas background behind all zones.</p>
                       </div>
 
                       <div className="space-y-2">

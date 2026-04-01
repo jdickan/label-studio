@@ -819,6 +819,10 @@ components:
           type: number
         safeAreaInches:
           type: number
+        labelBgColor:
+          type: string
+          nullable: true
+          description: CSS colour for the label canvas background (null / empty = transparent)
         createdAt:
           type: string
           format: date-time
@@ -854,6 +858,9 @@ components:
           type: number
         safeAreaInches:
           type: number
+        labelBgColor:
+          type: string
+          nullable: true
       required:
         - name
         - zones
@@ -878,6 +885,9 @@ components:
           type: number
         safeAreaInches:
           type: number
+        labelBgColor:
+          type: string
+          nullable: true
 
     DesignSystem:
       type: object

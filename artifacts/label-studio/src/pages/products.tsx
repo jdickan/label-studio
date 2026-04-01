@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { 
   useGetProducts, 
   useCreateProduct, 
@@ -37,7 +37,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Search, Plus, MoreHorizontal, Check, Edit2, Trash2 } from "lucide-react";
+import { Search, Plus, MoreHorizontal, Check, Edit2, Trash2, Download, Upload } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { 
@@ -47,11 +47,39 @@ import {
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 
+const CSV_HEADERS = ["sku","productType","name","scentName","scentNotes","size","weight","ingredients","instructions","burnTime","waxType","location","warnings","isActive"] as const;
+
+function parseCsvRow(row: string): string[] {
+  const result: string[] = [];
+  let cur = "";
+  let inQuotes = false;
+  for (let i = 0; i < row.length; i++) {
+    const ch = row[i];
+    if (ch === '"') {
+      if (inQuotes && row[i + 1] === '"') { cur += '"'; i++; }
+      else { inQuotes = !inQuotes; }
+    } else if (ch === "," && !inQuotes) {
+      result.push(cur); cur = "";
+    } else {
+      cur += ch;
+    }
+  }
+  result.push(cur);
+  return result;
+}
+
+function toCsvCell(v: unknown): string {
+  const s = v == null ? "" : String(v);
+  return s.includes(",") || s.includes('"') || s.includes("\n") ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
 export default function Products() {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
+  const csvInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -181,6 +209,71 @@ export default function Products() {
     return type.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
   };
 
+  const handleDownloadCsv = () => {
+    const prods = allProducts ?? [];
+    const rows = [CSV_HEADERS.join(",")];
+    for (const p of prods) {
+      rows.push(CSV_HEADERS.map(h => toCsvCell((p as any)[h])).join(","));
+    }
+    const blob = new Blob([rows.join("\n")], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "products.csv"; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportCsv = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    setIsImporting(true);
+    try {
+      const text = await file.text();
+      const lines = text.split(/\r?\n/).filter(l => l.trim());
+      if (lines.length < 2) { toast({ title: "CSV has no data rows", variant: "destructive" }); return; }
+      const headers = parseCsvRow(lines[0]).map(h => h.trim().toLowerCase());
+      let created = 0, failed = 0;
+      for (let i = 1; i < lines.length; i++) {
+        const vals = parseCsvRow(lines[i]);
+        const row: Record<string, string> = {};
+        headers.forEach((h, idx) => { row[h] = vals[idx]?.trim() ?? ""; });
+        const productType = row["producttype"] || row["product_type"] || "soy_candle";
+        const name = row["name"] || "";
+        const scentName = row["scentname"] || row["scent_name"] || row["scent"] || "";
+        if (!name) { failed++; continue; }
+        try {
+          await new Promise<void>((resolve, reject) => {
+            createMutation.mutate({
+              data: {
+                productType,
+                name,
+                scentName,
+                scentNotes: row["scentnotes"] || row["scent_notes"] || "",
+                size: row["size"] || "",
+                weight: row["weight"] || "",
+                ingredients: row["ingredients"] || "",
+                instructions: row["instructions"] || "",
+                burnTime: row["burntime"] || row["burn_time"] || "",
+                waxType: row["waxtype"] || row["wax_type"] || "",
+                location: row["location"] || "",
+                warnings: row["warnings"] || "",
+                sku: row["sku"] || "",
+                isActive: row["isactive"] !== "false",
+              }
+            }, { onSuccess: () => resolve(), onError: () => reject() });
+          });
+          created++;
+        } catch { failed++; }
+      }
+      queryClient.invalidateQueries({ queryKey: getGetProductsQueryKey() });
+      toast({ title: `Import complete: ${created} added${failed ? `, ${failed} failed` : ""}` });
+    } catch {
+      toast({ title: "Failed to parse CSV", variant: "destructive" });
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -188,10 +281,32 @@ export default function Products() {
           <h1 className="text-3xl font-bold tracking-tight">Products</h1>
           <p className="text-muted-foreground mt-1">Manage your catalog and formula details.</p>
         </div>
-        <Button onClick={handleCreate} data-testid="button-create-product">
-          <Plus className="w-4 h-4 mr-2" />
-          New Product
-        </Button>
+        <div className="flex items-center gap-2">
+          <input
+            ref={csvInputRef}
+            type="file"
+            accept=".csv,text/csv"
+            className="hidden"
+            onChange={handleImportCsv}
+          />
+          <Button variant="outline" size="sm" onClick={handleDownloadCsv} title="Download all products as a spreadsheet">
+            <Download className="w-4 h-4 mr-2" />
+            Export CSV
+          </Button>
+          <Button
+            variant="outline" size="sm"
+            onClick={() => csvInputRef.current?.click()}
+            disabled={isImporting}
+            title="Upload a CSV to bulk-create products"
+          >
+            <Upload className="w-4 h-4 mr-2" />
+            {isImporting ? "Importing…" : "Import CSV"}
+          </Button>
+          <Button onClick={handleCreate} data-testid="button-create-product">
+            <Plus className="w-4 h-4 mr-2" />
+            New Product
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-4 items-center mb-4 bg-card p-4 rounded-lg border shadow-sm">

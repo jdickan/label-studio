@@ -16,4 +16,5 @@ export interface UpdateLabelTemplateBody {
   safeAreaEnabled?: boolean;
   bleedInches?: number;
   safeAreaInches?: number;
+  labelBgColor?: string | null;
 }

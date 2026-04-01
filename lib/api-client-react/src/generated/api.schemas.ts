@@ -176,6 +176,8 @@ export interface LabelTemplate {
   safeAreaEnabled: boolean;
   bleedInches: number;
   safeAreaInches: number;
+  /** CSS colour for the label canvas background (null / empty = transparent) */
+  labelBgColor?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -190,6 +192,7 @@ export interface CreateLabelTemplateBody {
   safeAreaEnabled?: boolean;
   bleedInches?: number;
   safeAreaInches?: number;
+  labelBgColor?: string | null;
 }
 
 export interface UpdateLabelTemplateBody {
@@ -202,6 +205,7 @@ export interface UpdateLabelTemplateBody {
   safeAreaEnabled?: boolean;
   bleedInches?: number;
   safeAreaInches?: number;
+  labelBgColor?: string | null;
 }
 
 export interface DesignSystem {

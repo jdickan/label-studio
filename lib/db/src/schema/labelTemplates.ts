@@ -13,6 +13,7 @@ export const labelTemplatesTable = pgTable("label_templates", {
   safeAreaEnabled: boolean("safe_area_enabled").notNull().default(false),
   bleedInches: real("bleed_inches").notNull().default(0.125),
   safeAreaInches: real("safe_area_inches").notNull().default(0.125),
+  labelBgColor: text("label_bg_color"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

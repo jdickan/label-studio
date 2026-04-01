@@ -17,6 +17,8 @@ export interface LabelTemplate {
   safeAreaEnabled: boolean;
   bleedInches: number;
   safeAreaInches: number;
+  /** CSS colour for the label canvas background (null / empty = transparent) */
+  labelBgColor?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
