@@ -11,7 +11,7 @@ Label Studio lets you:
 - **Manage label sheet templates** — Store precise physical measurements (margins, gaps, label dimensions, corner radii) for OnlineLabels sheet formats. Upload a vendor's blank PDF template and the app extracts measurements automatically via vector path analysis.
 - **Design label templates** — Define layout zones (brand name, product name, scent notes, weight/volume, address, etc.) on a per-sheet template with safe-area and bleed guides.
 - **Maintain a product catalog** — Store product details (type, scent notes, weight, SKU, ingredients, warnings) ready to populate labels.
-- **Queue print jobs** — Batch products onto a label sheet, preview the layout, and download a ready-to-print PDF with printable label borders on one layer and non-printing guides on another.
+- **Queue print jobs** — Batch products onto a label sheet and preview the layout in the browser. (Product-content PDF generation is planned for a future release. The sheet template border PDF — die-cut outlines + non-printing guides on separate OCG layers — is available now via "Download PDF" on any sheet card.)
 - **Configure brand settings** — Store colors, fonts, logo, address, and contact info centrally so every template uses consistent branding.
 
 ---
