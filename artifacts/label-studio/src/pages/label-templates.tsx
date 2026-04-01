@@ -942,6 +942,20 @@ export default function LabelTemplates() {
                         {zones.length === 0 && (
                           <p className="text-xs text-muted-foreground">No zones. Upload a label or click "Add Zone".</p>
                         )}
+                        {REQUIRED_ROLES.filter(role => !zones.some(z => z.role === role)).map(role => (
+                          <div key={role} className="flex items-center gap-2 px-2.5 py-1.5 rounded-md border border-dashed border-destructive/50 bg-destructive/5 text-xs">
+                            <AlertCircle className="w-3 h-3 text-destructive shrink-0" />
+                            <span className="text-destructive flex-1 truncate">
+                              {ZONE_ROLES.find(r => r.value === role)?.label} zone missing
+                            </span>
+                            <button
+                              onClick={() => setZones(prev => [...prev, withMaxChars({ id: crypto.randomUUID(), role, text: "", x: 0.1, y: 0.1, w: 0.8, h: 0.2, color: "#ffffff", fontSize: 14, textAlign: "left" as const })])}
+                              className="text-destructive hover:underline font-medium shrink-0"
+                            >
+                              Add
+                            </button>
+                          </div>
+                        ))}
                         {zones.map(z => {
                           const s = ROLE_STYLE[z.role];
                           const required = REQUIRED_ROLES.includes(z.role) && !z.text;

@@ -134,8 +134,8 @@ router.post("/analyze", upload.single("image"), async (req, res) => {
       base64 = converted.base64;
       mimeType = converted.mimeType;
     } catch (err: unknown) {
-      req.log.warn({ err }, "PDF conversion failed — returning default scaffold");
-      res.json({ zones: buildDefaultScaffold(), brandMatches: {} });
+      req.log.warn({ err }, "PDF conversion failed — returning empty scaffold for manual zone design");
+      res.json({ zones: [], brandMatches: {} });
       return;
     }
   } else {
@@ -152,7 +152,7 @@ router.post("/analyze", upload.single("image"), async (req, res) => {
     const { openai } = await import("@workspace/integrations-openai-ai-server");
 
     const response = await openai.chat.completions.create({
-      model: "gpt-5.2",
+      model: "gpt-4o",
       max_completion_tokens: 2048,
       messages: [
         {
@@ -198,10 +198,6 @@ router.post("/analyze", upload.single("image"), async (req, res) => {
         return withMaxChars(partial);
       });
 
-    if (zones.length === 0) {
-      zones = buildDefaultScaffold();
-    }
-
     for (const zone of zones) {
       if (zone.role === "brand-name" && zone.text) brandMatches["brandName"] = zone.text;
       if (zone.role === "address" && zone.text) brandMatches["address"] = zone.text;
@@ -209,8 +205,8 @@ router.post("/analyze", upload.single("image"), async (req, res) => {
     }
 
   } catch (err: unknown) {
-    req.log.warn({ err }, "LLM analysis failed — returning default scaffold");
-    zones = buildDefaultScaffold();
+    req.log.warn({ err }, "LLM analysis failed — returning empty scaffold for manual zone design");
+    zones = [];
   }
 
   res.json({ zones, brandMatches });

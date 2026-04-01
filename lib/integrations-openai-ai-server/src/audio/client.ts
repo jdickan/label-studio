@@ -1,4 +1,7 @@
 import OpenAI, { toFile } from "openai";
+
+type AudioDelta = { audio?: { transcript?: string; data?: string } };
+type AudioMessage = { audio?: { transcript?: string; data?: string }; content?: string };
 import { Buffer } from "node:buffer";
 import { spawn } from "child_process";
 import { writeFile, unlink, readFile } from "fs/promises";
@@ -127,7 +130,7 @@ export async function voiceChat(
       ],
     }],
   });
-  const message = response.choices[0]?.message as any;
+  const message = response.choices[0]?.message as unknown as AudioMessage;
   const transcript = message?.audio?.transcript || message?.content || "";
   const audioData = message?.audio?.data ?? "";
   return {
@@ -158,7 +161,7 @@ export async function voiceChatStream(
 
   return (async function* () {
     for await (const chunk of stream) {
-      const delta = chunk.choices?.[0]?.delta as any;
+      const delta = chunk.choices?.[0]?.delta as unknown as AudioDelta;
       if (!delta) continue;
       if (delta?.audio?.transcript) {
         yield { type: "transcript", data: delta.audio.transcript };
@@ -185,7 +188,7 @@ export async function textToSpeech(
       { role: "user", content: `Repeat the following text verbatim: ${text}` },
     ],
   });
-  const audioData = (response.choices[0]?.message as any)?.audio?.data ?? "";
+  const audioData = (response.choices[0]?.message as unknown as AudioMessage)?.audio?.data ?? "";
   return Buffer.from(audioData, "base64");
 }
 
@@ -207,7 +210,7 @@ export async function textToSpeechStream(
 
   return (async function* () {
     for await (const chunk of stream) {
-      const delta = chunk.choices?.[0]?.delta as any;
+      const delta = chunk.choices?.[0]?.delta as unknown as AudioDelta;
       if (!delta) continue;
       if (delta?.audio?.data) {
         yield delta.audio.data;
