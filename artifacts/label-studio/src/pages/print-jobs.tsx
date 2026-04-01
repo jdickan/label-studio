@@ -446,49 +446,112 @@ export default function PrintJobs() {
     window.print();
   };
 
+  const drawSheetToCanvas = useCallback((slots: GangedSlot[], sheet: LabelSheetType): HTMLCanvasElement => {
+    const DPI = 150;
+    const px = (inches: number) => Math.round(inches * DPI);
+    const canvas = document.createElement("canvas");
+    canvas.width = px(sheet.pageWidth);
+    canvas.height = px(sheet.pageHeight);
+    const ctx = canvas.getContext("2d")!;
+
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const topPad = px(sheet.topMargin);
+    const leftPad = px(sheet.leftMargin);
+    const labelW = px(sheet.labelWidth);
+    const labelH = px(sheet.labelHeight);
+    const colGap = px(sheet.horizontalGap || 0);
+    const rowGap = px(sheet.verticalGap || 0);
+
+    slots.forEach((slot, i) => {
+      const col = i % sheet.labelsAcross;
+      const row = Math.floor(i / sheet.labelsAcross);
+      const x = leftPad + col * (labelW + colGap);
+      const y = topPad + row * (labelH + rowGap);
+
+      if (slot.type === "blank" && slot.isIntentionalBlank) {
+        ctx.save();
+        ctx.setLineDash([3, 3]);
+        ctx.strokeStyle = "#f97316";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x + 0.5, y + 0.5, labelW - 1, labelH - 1);
+        ctx.fillStyle = "#fed7aa22";
+        ctx.fillRect(x, y, labelW, labelH);
+        ctx.restore();
+        ctx.fillStyle = "#f97316";
+        ctx.font = `${px(0.06)}px sans-serif`;
+        ctx.textAlign = "center";
+        ctx.fillText("BLANK", x + labelW / 2, y + labelH / 2 + 3);
+      } else if (slot.type === "blank") {
+        ctx.save();
+        ctx.setLineDash([2, 2]);
+        ctx.strokeStyle = "#e5e7eb";
+        ctx.lineWidth = 0.5;
+        ctx.strokeRect(x, y, labelW, labelH);
+        ctx.restore();
+      } else {
+        ctx.strokeStyle = "#d1d5db";
+        ctx.lineWidth = 0.5;
+        ctx.strokeRect(x + 0.25, y + 0.25, labelW - 0.5, labelH - 0.5);
+
+        const cx = x + labelW / 2;
+        const pad = px(0.05);
+
+        if (slot.productName) {
+          ctx.fillStyle = "#111827";
+          ctx.font = `bold ${px(0.09)}px sans-serif`;
+          ctx.textAlign = "center";
+          ctx.fillText(slot.productName, cx, y + pad + px(0.09), labelW - pad * 2);
+        }
+        if (slot.productScentName) {
+          ctx.fillStyle = "#6b7280";
+          ctx.font = `${px(0.07)}px sans-serif`;
+          ctx.textAlign = "center";
+          ctx.fillText(slot.productScentName, cx, y + pad + px(0.18), labelW - pad * 2);
+        }
+        if (slot.productSize) {
+          ctx.fillStyle = "#9ca3af";
+          ctx.font = `${px(0.06)}px sans-serif`;
+          ctx.textAlign = "center";
+          ctx.fillText(slot.productSize, cx, y + pad + px(0.26), labelW - pad * 2);
+        }
+      }
+    });
+
+    return canvas;
+  }, []);
+
   const handleDownloadPdf = useCallback(async () => {
-    if (!previewRef.current || !activeSheetForPreview) return;
+    if (!activeSheetForPreview || !previewJob || gangedSheets.length === 0) {
+      toast({ title: "Nothing to export", variant: "destructive" });
+      return;
+    }
     setIsDownloadingPdf(true);
     try {
       const { default: jsPDF } = await import("jspdf");
-      const { default: html2canvas } = await import("html2canvas");
-
-      const sheetNodes = previewRef.current.querySelectorAll<HTMLElement>("[data-sheet-page]");
-      if (sheetNodes.length === 0) {
-        toast({ title: "Nothing to export", variant: "destructive" });
-        return;
-      }
-
       const pageW = activeSheetForPreview.pageWidth;
       const pageH = activeSheetForPreview.pageHeight;
-      const pdf = new jsPDF({
-        orientation: pageW >= pageH ? "landscape" : "portrait",
-        unit: "in",
-        format: [pageW, pageH],
-      });
+      const orientation = pageW >= pageH ? "landscape" : "portrait";
+      const pdf = new jsPDF({ orientation, unit: "in", format: [pageW, pageH] });
 
-      for (let i = 0; i < sheetNodes.length; i++) {
-        const node = sheetNodes[i];
-        const canvas = await html2canvas(node, {
-          scale: 3,
-          useCORS: true,
-          backgroundColor: "#ffffff",
-        });
+      for (let i = 0; i < gangedSheets.length; i++) {
+        const canvas = drawSheetToCanvas(gangedSheets[i], activeSheetForPreview);
         const imgData = canvas.toDataURL("image/png");
-        if (i > 0) pdf.addPage([pageW, pageH], pageW >= pageH ? "landscape" : "portrait");
+        if (i > 0) pdf.addPage([pageW, pageH], orientation);
         pdf.addImage(imgData, "PNG", 0, 0, pageW, pageH);
       }
 
-      const jobName = previewJob?.name?.replace(/[^a-z0-9]/gi, "_") || "print_job";
+      const jobName = previewJob.name?.replace(/[^a-z0-9]/gi, "_") || "print_job";
       pdf.save(`${jobName}.pdf`);
       toast({ title: "PDF downloaded" });
     } catch (err) {
-      console.error(err);
-      toast({ title: "PDF export failed", variant: "destructive" });
+      console.error("PDF export error:", err);
+      toast({ title: "PDF export failed", description: String(err), variant: "destructive" });
     } finally {
       setIsDownloadingPdf(false);
     }
-  }, [activeSheetForPreview, previewJob, toast]);
+  }, [activeSheetForPreview, previewJob, gangedSheets, drawSheetToCanvas, toast]);
 
   const totalLabelsInForm = useMemo(() => {
     return formData.items.reduce((s, i) => s + (i.quantity || 0), 0);

@@ -128,6 +128,14 @@ function newZone(id: string): LabelZone {
   return withMaxChars(partial);
 }
 
+function getContrastColor(hex: string): string {
+  const c = (hex || "#ffffff").replace("#", "").padStart(6, "0");
+  const r = parseInt(c.slice(0, 2), 16);
+  const g = parseInt(c.slice(2, 4), 16);
+  const b = parseInt(c.slice(4, 6), 16);
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.5 ? "#1a1a1a" : "#f5f5f5";
+}
+
 function hexColorDistance(a: string, b: string): number {
   const toRgb = (hex: string) => {
     const c = hex.replace("#", "").padStart(6, "0");
@@ -237,6 +245,7 @@ type ZoneCanvasProps = {
 
 function ZoneCanvas({ zones, selectedId, onSelect, onChange, imageUrl, canvasW, canvasH, readOnly, label }: ZoneCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [editingZoneId, setEditingZoneId] = useState<string | null>(null);
   const dragState = useRef<{
     type: "drag" | "resize";
     zoneId: string;
@@ -247,12 +256,12 @@ function ZoneCanvas({ zones, selectedId, onSelect, onChange, imageUrl, canvasW, 
   } | null>(null);
 
   const startDrag = useCallback((e: React.PointerEvent, zone: LabelZone, type: "drag" | "resize") => {
-    if (readOnly) return;
+    if (readOnly || editingZoneId === zone.id) return;
     e.stopPropagation();
     e.currentTarget.setPointerCapture(e.pointerId);
     const canvasRect = containerRef.current!.getBoundingClientRect();
     dragState.current = { type, zoneId: zone.id, startClientX: e.clientX, startClientY: e.clientY, startZone: { ...zone }, canvasRect };
-  }, [readOnly]);
+  }, [readOnly, editingZoneId]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
     const ds = dragState.current;
@@ -261,61 +270,193 @@ function ZoneCanvas({ zones, selectedId, onSelect, onChange, imageUrl, canvasW, 
     const dy = (e.clientY - ds.startClientY) / ds.canvasRect.height;
     onChange(zones.map(z => {
       if (z.id !== ds.zoneId) return z;
-      let updated: Omit<LabelZone, "maxChars">;
-      if (ds.type === "drag") {
-        updated = { ...z, x: Math.max(0, Math.min(1 - z.w, ds.startZone.x + dx)), y: Math.max(0, Math.min(1 - z.h, ds.startZone.y + dy)) };
-      } else {
-        updated = { ...z, w: Math.max(0.05, Math.min(1 - z.x, ds.startZone.w + dx)), h: Math.max(0.03, Math.min(1 - z.y, ds.startZone.h + dy)) };
-      }
+      const updated = ds.type === "drag"
+        ? { ...z, x: Math.max(0, Math.min(1 - z.w, ds.startZone.x + dx)), y: Math.max(0, Math.min(1 - z.h, ds.startZone.y + dy)) }
+        : { ...z, w: Math.max(0.05, Math.min(1 - z.x, ds.startZone.w + dx)), h: Math.max(0.03, Math.min(1 - z.y, ds.startZone.h + dy)) };
       return withMaxChars(updated);
     }));
   }, [zones, onChange]);
 
   const handlePointerUp = useCallback(() => { dragState.current = null; }, []);
 
+  const commitEdit = useCallback((zoneId: string, el: HTMLElement) => {
+    const text = el.innerText.replace(/\n$/, "");
+    onChange?.(zones.map(z => z.id === zoneId ? withMaxChars({ ...z, text }) : z));
+    setEditingZoneId(null);
+  }, [zones, onChange]);
+
   return (
     <div className="flex flex-col items-center gap-1">
       {label && <p className="text-xs text-muted-foreground font-medium">{label}</p>}
       <div
         ref={containerRef}
-        className="relative bg-white border-2 border-muted shadow-xl select-none"
-        style={{ width: canvasW, height: canvasH }}
+        className="relative shadow-2xl select-none overflow-hidden rounded-sm"
+        style={{ width: canvasW, height: canvasH, background: "#f8f6f2" }}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
-        onClick={() => !readOnly && onSelect(null)}
+        onClick={() => { if (!readOnly) { onSelect(null); setEditingZoneId(null); } }}
       >
+        {/* Reference image ghost */}
         {imageUrl && (
           <img
             src={imageUrl}
             alt="Label reference"
-            className="absolute inset-0 w-full h-full object-cover opacity-30 pointer-events-none"
+            className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+            style={{ opacity: 0.35 }}
           />
         )}
+
+        {/* Empty state hint */}
+        {!imageUrl && zones.length === 0 && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <p className="text-xs text-muted-foreground/40 select-none">No zones yet</p>
+          </div>
+        )}
+
         {zones.map(zone => {
-          const style = ROLE_STYLE[zone.role];
           const isSelected = selectedId === zone.id;
+          const isEditing = !readOnly && editingZoneId === zone.id;
+          const hasText = !NO_TEXT_ROLES.includes(zone.role);
+          const roleLabel = ZONE_ROLES.find(r => r.value === zone.role)?.label ?? zone.role;
           const charRatio = zone.text ? zone.text.length / zone.maxChars : 0;
+          const bgColor = zone.color || "#ffffff";
+          const fgColor = getContrastColor(bgColor);
+          const pxFont = Math.max(7, zone.fontSize * (canvasH / 260));
+          const pad = Math.max(3, pxFont * 0.25);
+
           return (
             <div
               key={zone.id}
               className={cn(
-                "absolute border-2 cursor-move flex items-center justify-center overflow-hidden",
-                style.bg,
-                isSelected ? "border-foreground shadow-lg ring-2 ring-offset-1 ring-foreground/50" : `${style.border} border-dashed`,
+                "absolute overflow-hidden group transition-[box-shadow]",
+                !readOnly && !isEditing && "cursor-move",
+                isEditing && "cursor-text",
+                isSelected && !readOnly
+                  ? "ring-2 ring-[#2563eb] ring-offset-0 shadow-lg"
+                  : !readOnly && "hover:ring-1 hover:ring-[#2563eb]/50",
                 charRatio > 1 && "ring-2 ring-red-500"
               )}
-              style={{ left: zone.x * canvasW, top: zone.y * canvasH, width: zone.w * canvasW, height: zone.h * canvasH }}
+              style={{
+                left: zone.x * canvasW,
+                top: zone.y * canvasH,
+                width: zone.w * canvasW,
+                height: zone.h * canvasH,
+                backgroundColor: bgColor,
+              }}
               onClick={e => { e.stopPropagation(); if (!readOnly) onSelect(zone.id); }}
-              onPointerDown={e => { if (!readOnly) { onSelect(zone.id); startDrag(e, zone, "drag"); } }}
+              onDoubleClick={e => {
+                if (readOnly || !hasText) return;
+                e.stopPropagation();
+                onSelect(zone.id);
+                setEditingZoneId(zone.id);
+              }}
+              onPointerDown={e => {
+                if (!readOnly && !isEditing) { onSelect(zone.id); startDrag(e, zone, "drag"); }
+              }}
             >
-              <span className={cn("text-[9px] font-semibold px-1 truncate leading-tight", style.text)}>
-                {zone.text || ZONE_ROLES.find(r => r.value === zone.role)?.label || zone.role}
-              </span>
-              {isSelected && !readOnly && (
+              {/* Photo/logo/decorative visual */}
+              {(zone.role === "photo-area" || zone.role === "logo-area") && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div
+                    className="absolute inset-0 opacity-20"
+                    style={{
+                      backgroundImage: `repeating-linear-gradient(45deg, ${fgColor} 0px, ${fgColor} 1px, transparent 1px, transparent 8px)`,
+                    }}
+                  />
+                  <ImagePlus style={{ width: pxFont * 1.8, height: pxFont * 1.8, color: fgColor, opacity: 0.4 }} />
+                </div>
+              )}
+
+              {zone.role === "decorative-bar" && (
+                <div className="absolute inset-0 pointer-events-none" style={{ opacity: 0.5 }}>
+                  <div className="w-full h-full" style={{ background: `repeating-linear-gradient(90deg, ${fgColor}22 0px, ${fgColor}22 4px, transparent 4px, transparent 8px)` }} />
+                </div>
+              )}
+
+              {/* Text content — display mode */}
+              {hasText && !isEditing && (
                 <div
-                  className="absolute bottom-0 right-0 w-4 h-4 bg-foreground cursor-se-resize rounded-tl-sm"
+                  className="w-full h-full overflow-hidden pointer-events-none"
+                  style={{
+                    fontSize: pxFont,
+                    color: fgColor,
+                    textAlign: zone.textAlign as "left" | "center" | "right",
+                    padding: `${pad}px ${pad * 1.4}px`,
+                    lineHeight: 1.35,
+                    display: "flex",
+                    alignItems: "flex-start",
+                    justifyContent: zone.textAlign === "center" ? "center" : zone.textAlign === "right" ? "flex-end" : "flex-start",
+                    wordBreak: "break-word",
+                    whiteSpace: "pre-wrap",
+                  }}
+                >
+                  {zone.text ? zone.text : (
+                    <span style={{ opacity: 0.3, fontStyle: "italic" }}>{roleLabel}</span>
+                  )}
+                </div>
+              )}
+
+              {/* Text content — inline edit mode */}
+              {hasText && isEditing && (
+                <div
+                  contentEditable
+                  suppressContentEditableWarning
+                  className="w-full h-full outline-none"
+                  style={{
+                    fontSize: pxFont,
+                    color: fgColor,
+                    textAlign: zone.textAlign as "left" | "center" | "right",
+                    padding: `${pad}px ${pad * 1.4}px`,
+                    lineHeight: 1.35,
+                    wordBreak: "break-word",
+                    whiteSpace: "pre-wrap",
+                    boxShadow: "inset 0 0 0 1.5px #2563eb",
+                  }}
+                  ref={el => {
+                    if (el) {
+                      if (el.innerText !== zone.text) el.innerText = zone.text || "";
+                      el.focus();
+                      const range = document.createRange();
+                      range.selectNodeContents(el);
+                      range.collapse(false);
+                      window.getSelection()?.removeAllRanges();
+                      window.getSelection()?.addRange(range);
+                    }
+                  }}
+                  onBlur={e => commitEdit(zone.id, e.currentTarget)}
+                  onKeyDown={e => {
+                    if (e.key === "Escape") { commitEdit(zone.id, e.currentTarget); e.preventDefault(); }
+                  }}
+                  onClick={e => e.stopPropagation()}
+                />
+              )}
+
+              {/* Role badge — shows on hover / selection */}
+              <div className={cn(
+                "absolute top-0 left-0 leading-none px-1 py-0.5 text-[7px] font-medium select-none pointer-events-none transition-opacity rounded-br-sm",
+                "bg-black/50 text-white",
+                isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-80"
+              )}>
+                {roleLabel}
+                {hasText && !readOnly && !isEditing && <span className="ml-1 opacity-60">↵ edit</span>}
+              </div>
+
+              {/* Resize handle — bottom-right */}
+              {isSelected && !readOnly && !isEditing && (
+                <div
+                  className="absolute bottom-0 right-0 w-3 h-3 cursor-se-resize"
+                  style={{ background: "#2563eb" }}
                   onPointerDown={e => { e.stopPropagation(); startDrag(e, zone, "resize"); }}
                 />
+              )}
+
+              {/* Corner dots — top-left indicator when selected */}
+              {isSelected && !readOnly && (
+                <>
+                  <div className="absolute top-0 left-0 w-2 h-2 rounded-full" style={{ background: "#2563eb", margin: "-1px 0 0 -1px" }} />
+                  <div className="absolute top-0 right-0 w-2 h-2 rounded-full" style={{ background: "#2563eb", margin: "-1px -1px 0 0" }} />
+                  <div className="absolute bottom-0 left-0 w-2 h-2 rounded-full" style={{ background: "#2563eb", margin: "0 0 -1px -1px" }} />
+                </>
               )}
             </div>
           );
