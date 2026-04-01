@@ -217,7 +217,15 @@ lib/api-spec/openapi.yaml
         └── lib/api-zod/            ← Zod validation schemas (CreateLabelSheetBody, etc.)
 ```
 
-**Never hand-edit** files in `api-client-react/` or `api-zod/`. Always update `openapi.yaml` and re-run codegen. The API server imports `@workspace/api-zod` for request validation; the frontend imports `@workspace/api-client-react` for all data fetching.
+**Never hand-edit** files in `api-client-react/` or `api-zod/`. Always update `openapi.yaml` and re-run codegen.
+
+**Where generated code is used:**
+- The API server imports `@workspace/api-zod` schemas for request body validation on standard CRUD routes (label sheets, templates, products, print jobs, design system).
+- The frontend imports `@workspace/api-client-react` TanStack Query hooks for all standard CRUD data fetching (e.g. `useGetLabelSheets`, `useDeleteLabelSheet`).
+
+**Where manual HTTP is used (exceptions):**
+- **PDF upload + SSE analysis**: the label-sheets page uses `fetch()` with `FormData` for `POST /api/label-sheets/upload-pdf` and `new EventSource(...)` for the SSE stream — these cannot use generated hooks because they involve multipart and streaming responses. The backend `pdfAnalysis.ts` routes parse request data manually (no generated Zod schemas for these routes).
+- **Import endpoint**: `POST /api/label-sheets/import` is called via manual `fetch()` from the review modal.
 
 ---
 
@@ -243,12 +251,14 @@ SSE state is held in a `Map<string, Job>` in-process (each `Job` has a `FileResu
 
 `GET /api/label-sheets/:id/pdf` generates a two-layer PDF via **manual low-level PDF object assembly** — no third-party library. The generator in `labelSheets.ts` builds raw PDF objects as strings, tracks cross-reference byte offsets, and writes the `xref` table and trailer block directly.
 
-The output PDF (`%PDF-1.6`) has two Optional Content Groups (OCGs):
+The output PDF (`%PDF-1.6`) has **two Optional Content Groups (OCGs) that both draw the same label outline paths**, distinguished only by stroke color and weight:
 
-- **OCG "Label Borders"** (black, in print set) — stroked rectangles or rounded-rectangle Bezier paths tracing each label's die-cut outline.
-- **OCG "Guides"** (cyan, excluded from print via the `AS` event dictionary) — margin lines, safe-area insets, bleed marks.
+- **OCG "Label Borders"** — black stroke (~1pt), declared printable (`/Intent [/View /Design /Print]`). Draws all label die-cut outlines (rectangle `re` operators or Bezier `m/l/c/h` paths for rounded corners).
+- **OCG "Guides"** — Illustrator guide blue stroke (R=0 G=128 B=255, ~0.5pt), declared display-only. Draws the **same** label outlines again in a thinner blue line. The `AS` event dictionary turns this OCG **OFF** when the print event fires, so these lines are visible on-screen for placement guidance but do not appear in print output.
 
-For sheets with a `corner_radius`, each label is drawn as a rounded-rectangle Bezier path using the cubic approximation constant `k = 0.552284749` (standard quarter-circle cubic). This mirrors the Bezier extraction logic used in `pdfAnalysis.ts` to reverse-engineer corner radii from uploaded PDFs.
+> Note: margin lines, safe-area insets, and bleed marks are **not yet implemented** in the generated PDF — that geometry exists in the browser sheet-preview component but has not been ported to the PDF output layer.
+
+For sheets with a `corner_radius`, each label is drawn as a rounded-rectangle Bezier path using the cubic approximation constant `k = 0.5523` (standard quarter-circle cubic). This mirrors the Bezier extraction logic in `pdfAnalysis.ts` to reverse-engineer corner radii from uploaded PDFs.
 
 ---
 

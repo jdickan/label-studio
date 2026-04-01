@@ -114,7 +114,7 @@ When `safeAreaEnabled = true`, the sheet carries two inset distances:
 - **`bleedInches`** — how far artwork should extend beyond the die-cut line to account for cutting tolerance (typically 0.125")
 - **`safeAreaInches`** — the inner "live area" inset where important content must stay to avoid being cut off (typically 0.125")
 
-These are rendered as guide overlays in the sheet preview and reflected in the downloaded PDF as cyan guide lines on the non-printing OCG layer.
+These are rendered as guide overlays in the browser sheet preview. Note: margin and safe-area lines are **not yet included** in the downloaded PDF — the generated PDF currently contains only the label die-cut outlines (see PDF layer description below).
 
 ### Adding new sheets
 
@@ -134,10 +134,10 @@ See [Label Sheet Measurement Protocol](LABEL_SHEET_MEASUREMENT_PROTOCOL.md) for 
 ### Downloading a sheet PDF
 
 `GET /api/label-sheets/:id/pdf` returns a two-layer PDF:
-- **OCG "Label Borders"** (black) — printable die-cut outlines; included in the print set
-- **OCG "Guides"** (cyan) — margin lines, safe-area insets, bleed marks; excluded from print via Acrobat's AS (Auto State) event
+- **OCG "Label Borders"** (black, ~1pt) — printable die-cut outlines; declared `/Intent [/View /Design /Print]`
+- **OCG "Guides"** (Illustrator guide blue, ~0.5pt) — the **same** die-cut outline paths, drawn in a thinner blue line for on-screen placement guidance; excluded from print output via Acrobat's `AS` (Auto State) event dictionary
 
-Open in Acrobat or any OCG-aware PDF viewer to toggle layers. Print with only "Label Borders" visible for clean die-cut registration sheets.
+Both layers draw **identical geometry** — the label die-cut paths. Margin lines, safe-area insets, and bleed marks are **not yet rendered in the PDF output** (they are shown in the browser sheet-preview component but have not been ported to the PDF generator). Open in Acrobat or any OCG-aware viewer to toggle layers.
 
 ---
 

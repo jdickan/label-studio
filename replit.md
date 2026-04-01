@@ -122,9 +122,11 @@ All routes prefixed with `/api`:
 ## PDF Download (Sheet Border PDF)
 
 - Manual low-level PDF assembly (raw PDF objects + xref table; no library dependency)
-- OCG "Label Borders" (black) — die-cut outlines, included in print set
-- OCG "Guides" (cyan) — margin/bleed/safe-area lines, excluded from print via AS event
-- Rounded-corner labels use cubic Bezier approximation (k = 0.552284749)
+- Both OCG layers draw the **same** label die-cut outlines (rectangle `re` or Bezier paths):
+  - OCG "Label Borders" (black, ~1pt) — printable
+  - OCG "Guides" (Illustrator guide blue, ~0.5pt) — display-only, excluded from print via `AS` event
+- Margin/safe-area/bleed lines are NOT yet in the PDF output (browser preview only)
+- Rounded-corner labels use cubic Bezier approximation (k = 0.5523)
 - Route: `GET /api/label-sheets/:id/pdf`
 
 ## Typography & Kerning

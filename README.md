@@ -11,7 +11,7 @@ Label Studio lets you:
 - **Manage label sheet templates** — Store precise physical measurements (margins, gaps, label dimensions, corner radii) for OnlineLabels sheet formats. Upload a vendor's blank PDF template and the app extracts measurements automatically via vector path analysis.
 - **Design label templates** — Define layout zones (brand name, product name, scent notes, weight/volume, address, etc.) on a per-sheet template with safe-area and bleed guides.
 - **Maintain a product catalog** — Store product details (type, scent notes, weight, SKU, ingredients, warnings) ready to populate labels.
-- **Queue print jobs** — Batch products onto a label sheet and preview the layout in the browser. (Product-content PDF generation is planned for a future release. The sheet template border PDF — die-cut outlines + non-printing guides on separate OCG layers — is available now via "Download PDF" on any sheet card.)
+- **Queue print jobs** — Batch products onto a label sheet and preview the layout in the browser. Product-content PDF generation is planned for a future release. The sheet template border PDF (die-cut label outlines in two OCG layers for printing + on-screen guidance) is available separately via "Download PDF" on any sheet card.
 - **Configure brand settings** — Store colors, fonts, logo, address, and contact info centrally so every template uses consistent branding.
 
 ---
@@ -104,7 +104,7 @@ Stores the physical geometry of a label sheet: page size, label dimensions, grid
 
 Key UI features:
 - **Upload Template PDF** — drag-and-drop one or more PDF files; a 12-step SSE-streamed checklist extracts measurements and validates the H/V math before prompting for import
-- **Download PDF** — generates a two-layer PDF with OCG (Optional Content Groups): "Label Borders" (black, printable) and "Guides" (cyan, excluded from print via an `AS` event)
+- **Download PDF** — generates a two-layer PDF (manual PDF assembly, no library). Both OCG layers draw the same label die-cut outlines: "Label Borders" (black, ~1pt, printable) and "Guides" (Illustrator guide blue, ~0.5pt, display-only — excluded from print output via OCG `AS` event). Margin/safe-area lines are not yet in the generated PDF (they appear in the browser preview only)
 - **Add/Edit Custom Sheet** — manual form with full field set including corner radius and safe area/bleed section
 - **"New" badge** — auto-applied to sheets updated today; expires at midnight
 
