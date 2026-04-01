@@ -235,6 +235,8 @@ function AnalysisProgress({ steps }: { steps: AnalysisStep[] }) {
 
 // ─── ZoneCanvas ───────────────────────────────────────────────────────────────
 
+const HEADING_ROLES = new Set(["brand-name", "product-name"]);
+
 type ZoneCanvasProps = {
   zones: LabelZone[];
   selectedId: string | null;
@@ -245,9 +247,11 @@ type ZoneCanvasProps = {
   canvasH: number;
   readOnly?: boolean;
   label?: string;
+  headingFont?: string;
+  bodyFont?: string;
 };
 
-function ZoneCanvas({ zones, selectedId, onSelect, onChange, imageUrl, canvasW, canvasH, readOnly, label }: ZoneCanvasProps) {
+function ZoneCanvas({ zones, selectedId, onSelect, onChange, imageUrl, canvasW, canvasH, readOnly, label, headingFont, bodyFont }: ZoneCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [editingZoneId, setEditingZoneId] = useState<string | null>(null);
   const dragState = useRef<{
@@ -327,6 +331,9 @@ function ZoneCanvas({ zones, selectedId, onSelect, onChange, imageUrl, canvasW, 
           const fgColor = getContrastColor(bgColor);
           const pxFont = Math.max(7, zone.fontSize * (canvasH / 260));
           const pad = Math.max(3, pxFont * 0.25);
+          const zoneFontFamily = HEADING_ROLES.has(zone.role)
+            ? (headingFont || undefined)
+            : (bodyFont || undefined);
 
           return (
             <div
@@ -338,7 +345,7 @@ function ZoneCanvas({ zones, selectedId, onSelect, onChange, imageUrl, canvasW, 
                 isSelected && !readOnly
                   ? "ring-2 ring-[#2563eb] ring-offset-0 shadow-lg"
                   : !readOnly && "hover:ring-1 hover:ring-[#2563eb]/50",
-                charRatio > 1 && "ring-2 ring-red-500"
+                !readOnly && charRatio > 1 && "ring-2 ring-red-500"
               )}
               style={{
                 left: zone.x * canvasW,
@@ -401,6 +408,7 @@ function ZoneCanvas({ zones, selectedId, onSelect, onChange, imageUrl, canvasW, 
                     justifyContent: zone.textAlign === "center" ? "center" : zone.textAlign === "right" ? "flex-end" : "flex-start",
                     wordBreak: "break-word",
                     whiteSpace: "pre-wrap",
+                    fontFamily: zoneFontFamily,
                   }}
                 >
                   {zone.text ? zone.text : (
@@ -424,6 +432,7 @@ function ZoneCanvas({ zones, selectedId, onSelect, onChange, imageUrl, canvasW, 
                     wordBreak: "break-word",
                     whiteSpace: "pre-wrap",
                     boxShadow: "inset 0 0 0 1.5px #2563eb",
+                    fontFamily: zoneFontFamily,
                   }}
                   ref={el => {
                     if (el) {
@@ -1093,6 +1102,8 @@ export default function LabelTemplates() {
                         canvasW={mainCanvasW}
                         canvasH={mainCanvasH}
                         label={isSideBySide ? (assignedSheet ? `${assignedSheet.code} (assigned)` : "Current sheet") : undefined}
+                        headingFont={designSystem?.headingFont}
+                        bodyFont={designSystem?.bodyFont}
                       />
                       {isSideBySide && previewSheet && (
                         <ZoneCanvas
@@ -1103,6 +1114,8 @@ export default function LabelTemplates() {
                           canvasH={previewCanvasH}
                           readOnly
                           label={`${previewSheet.code} — ${previewSheet.labelWidth}"×${previewSheet.labelHeight}"`}
+                          headingFont={designSystem?.headingFont}
+                          bodyFont={designSystem?.bodyFont}
                         />
                       )}
                     </div>
@@ -1292,6 +1305,8 @@ export default function LabelTemplates() {
                     canvasW={pxW}
                     canvasH={pxH}
                     readOnly
+                    headingFont={designSystem?.headingFont}
+                    bodyFont={designSystem?.bodyFont}
                   />
                 </div>
               );

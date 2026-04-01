@@ -76,7 +76,7 @@ function FontUploadCard({
   slot: "heading" | "body";
   label: string;
   currentFamily: string;
-  onFontLoaded: (family: string) => void;
+  onFontLoaded: (family: string, dataUrl?: string) => void;
 }) {
   const [loadedFont, setLoadedFont] = useState<LoadedFont | null>(null);
   const priorFamilyRef = useRef<string>("");
@@ -101,13 +101,13 @@ function FontUploadCard({
     const reader = new FileReader();
     reader.onload = async (ev) => {
       const dataUrl = ev.target?.result as string;
-      const familyName = `custom-${slot}-${Date.now()}`;
+      const familyName = `custom-${slot}-${file.name.replace(/[^a-z0-9]/gi, "-")}`;
       try {
         const ff = new FontFace(familyName, `url(${dataUrl})`);
         const loaded = await ff.load();
         document.fonts.add(loaded);
         setLoadedFont({ name: file.name, family: familyName, size: Math.round(file.size / 1024) });
-        onFontLoaded(familyName);
+        onFontLoaded(familyName, dataUrl);
         toast({ title: `${label} font loaded`, description: file.name });
       } catch {
         toast({ title: "Font load failed", description: "The file may be corrupt or an unsupported format.", variant: "destructive" });
@@ -119,7 +119,7 @@ function FontUploadCard({
 
   const handleClear = () => {
     setLoadedFont(null);
-    onFontLoaded(priorFamilyRef.current || builtinFamily);
+    onFontLoaded(priorFamilyRef.current || builtinFamily, undefined);
     priorFamilyRef.current = "";
   };
 
@@ -360,13 +360,21 @@ export default function DesignSystem() {
                   slot="heading"
                   label="Heading Font"
                   currentFamily={formData.headingFont || ''}
-                  onFontLoaded={(family) => setFormData({ ...formData, headingFont: family })}
+                  onFontLoaded={(family, dataUrl) => setFormData((fd: any) => ({
+                    ...fd,
+                    headingFont: family,
+                    ...(dataUrl !== undefined ? { headingFontData: dataUrl } : {}),
+                  }))}
                 />
                 <FontUploadCard
                   slot="body"
                   label="Body Font"
                   currentFamily={formData.bodyFont || ''}
-                  onFontLoaded={(family) => setFormData({ ...formData, bodyFont: family })}
+                  onFontLoaded={(family, dataUrl) => setFormData((fd: any) => ({
+                    ...fd,
+                    bodyFont: family,
+                    ...(dataUrl !== undefined ? { bodyFontData: dataUrl } : {}),
+                  }))}
                 />
               </CardContent>
             </Card>

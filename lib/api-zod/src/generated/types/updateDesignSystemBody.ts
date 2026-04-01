@@ -14,6 +14,8 @@ export interface UpdateDesignSystemBody {
   textColor?: string;
   headingFont?: string;
   bodyFont?: string;
+  headingFontData?: string | null;
+  bodyFontData?: string | null;
   logoUrl?: string;
   brandName?: string;
   tagline?: string;

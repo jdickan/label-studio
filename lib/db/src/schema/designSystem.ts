@@ -11,6 +11,8 @@ export const designSystemTable = pgTable("design_system", {
   textColor: text("text_color").notNull().default("#1a1a2e"),
   headingFont: text("heading_font").notNull().default("Heinberg Textured"),
   bodyFont: text("body_font").notNull().default("Jost"),
+  headingFontData: text("heading_font_data"),
+  bodyFontData: text("body_font_data"),
   logoUrl: text("logo_url"),
   brandName: text("brand_name").notNull().default("My Scent Studio"),
   tagline: text("tagline"),

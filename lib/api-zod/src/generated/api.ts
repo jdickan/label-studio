@@ -378,6 +378,14 @@ export const GetDesignSystemResponse = zod.object({
   textColor: zod.string(),
   headingFont: zod.string(),
   bodyFont: zod.string(),
+  headingFontData: zod
+    .string()
+    .nullish()
+    .describe("Base64 data URL of the uploaded heading font file"),
+  bodyFontData: zod
+    .string()
+    .nullish()
+    .describe("Base64 data URL of the uploaded body font file"),
   logoUrl: zod.string().nullish(),
   brandName: zod.string(),
   tagline: zod.string().nullish(),
@@ -399,6 +407,8 @@ export const UpdateDesignSystemBody = zod.object({
   textColor: zod.string().optional(),
   headingFont: zod.string().optional(),
   bodyFont: zod.string().optional(),
+  headingFontData: zod.string().nullish(),
+  bodyFontData: zod.string().nullish(),
   logoUrl: zod.string().optional(),
   brandName: zod.string().optional(),
   tagline: zod.string().optional(),
@@ -417,6 +427,14 @@ export const UpdateDesignSystemResponse = zod.object({
   textColor: zod.string(),
   headingFont: zod.string(),
   bodyFont: zod.string(),
+  headingFontData: zod
+    .string()
+    .nullish()
+    .describe("Base64 data URL of the uploaded heading font file"),
+  bodyFontData: zod
+    .string()
+    .nullish()
+    .describe("Base64 data URL of the uploaded body font file"),
   logoUrl: zod.string().nullish(),
   brandName: zod.string(),
   tagline: zod.string().nullish(),

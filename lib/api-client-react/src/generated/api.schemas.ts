@@ -213,6 +213,10 @@ export interface DesignSystem {
   textColor: string;
   headingFont: string;
   bodyFont: string;
+  /** Base64 data URL of the uploaded heading font file */
+  headingFontData?: string | null;
+  /** Base64 data URL of the uploaded body font file */
+  bodyFontData?: string | null;
   logoUrl?: string | null;
   brandName: string;
   tagline?: string | null;
@@ -231,6 +235,8 @@ export interface UpdateDesignSystemBody {
   textColor?: string;
   headingFont?: string;
   bodyFont?: string;
+  headingFontData?: string | null;
+  bodyFontData?: string | null;
   logoUrl?: string;
   brandName?: string;
   tagline?: string;

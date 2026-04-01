@@ -898,6 +898,14 @@ components:
           type: string
         bodyFont:
           type: string
+        headingFontData:
+          type: string
+          nullable: true
+          description: Base64 data URL of the uploaded heading font file
+        bodyFontData:
+          type: string
+          nullable: true
+          description: Base64 data URL of the uploaded body font file
         logoUrl:
           type: string
           nullable: true
@@ -950,6 +958,12 @@ components:
           type: string
         bodyFont:
           type: string
+        headingFontData:
+          type: string
+          nullable: true
+        bodyFontData:
+          type: string
+          nullable: true
         logoUrl:
           type: string
         brandName:
