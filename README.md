@@ -100,7 +100,7 @@ pnpm --filter @workspace/db run push
 ## Features
 
 ### Label Sheet Templates
-Stores the physical geometry of a label sheet: page size, label dimensions, grid layout (rows × columns), margins, gaps, corner radius, shape (rectangle / circle / oval), safe-area, and bleed. Only OnlineLabels (OL-prefixed) sheets are seeded; no Avery. See [Label Sheet Measurement Protocol](docs/LABEL_SHEET_MEASUREMENT_PROTOCOL.md) for why PDF extraction is used instead of web scraping.
+Stores the physical geometry of a label sheet: page size, label dimensions, grid layout (rows × columns), margins, gaps, corner radius, shape (rectangle / circle / oval), safe-area, and bleed. Six verified OnlineLabels (OL-prefixed) sheets are seeded alongside one custom CandleBliss sheet (CB-4OZ-TIN, 1-up wrap). No Avery templates are included — measurements for Avery formats have not been independently verified. See [Label Sheet Measurement Protocol](docs/LABEL_SHEET_MEASUREMENT_PROTOCOL.md) for why PDF extraction is used instead of web scraping.
 
 Key UI features:
 - **Upload Template PDF** — drag-and-drop one or more PDF files; a 12-step SSE-streamed checklist extracts measurements and validates the H/V math before prompting for import
