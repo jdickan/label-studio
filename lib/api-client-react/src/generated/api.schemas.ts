@@ -113,6 +113,54 @@ export interface UpdateLabelSheetBody {
   safeAreaInches?: number;
 }
 
+export type LabelZoneRole = (typeof LabelZoneRole)[keyof typeof LabelZoneRole];
+
+export const LabelZoneRole = {
+  "brand-name": "brand-name",
+  "product-name": "product-name",
+  "scent-notes": "scent-notes",
+  "product-type": "product-type",
+  "weight-volume": "weight-volume",
+  address: "address",
+  website: "website",
+  disclaimer: "disclaimer",
+  date: "date",
+  "photo-area": "photo-area",
+  "logo-area": "logo-area",
+  "decorative-bar": "decorative-bar",
+} as const;
+
+export type LabelZoneTextAlign =
+  (typeof LabelZoneTextAlign)[keyof typeof LabelZoneTextAlign];
+
+export const LabelZoneTextAlign = {
+  left: "left",
+  center: "center",
+  right: "right",
+} as const;
+
+export interface LabelZone {
+  id: string;
+  role: LabelZoneRole;
+  text: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  color: string;
+  fontSize: number;
+  textAlign: LabelZoneTextAlign;
+  /** Approximate character capacity based on zone area and font size */
+  maxChars: number;
+}
+
+export type LabelZoneAnalysisResultBrandMatches = { [key: string]: string };
+
+export interface LabelZoneAnalysisResult {
+  zones: LabelZone[];
+  brandMatches: LabelZoneAnalysisResultBrandMatches;
+}
+
 export interface LabelTemplate {
   id: number;
   name: string;
@@ -383,6 +431,11 @@ export interface ProductTypeCount {
   productType: string;
   count: number;
 }
+
+export type AnalyzeLabelTemplateBody = {
+  /** Label image (JPEG, PNG, WebP) or single-page PDF */
+  image: Blob;
+};
 
 export type GetProductsParams = {
   productType?: string;

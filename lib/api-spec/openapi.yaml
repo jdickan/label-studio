@@ -222,6 +222,38 @@ paths:
         "204":
           description: Deleted
 
+  /label-templates/analyze:
+    post:
+      operationId: analyzeLabelTemplate
+      tags: [labelTemplates]
+      summary: Analyze a label image or PDF and return detected zones
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                image:
+                  type: string
+                  format: binary
+                  description: Label image (JPEG, PNG, WebP) or single-page PDF
+              required:
+                - image
+      responses:
+        "200":
+          description: Analysis result with detected zones
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LabelZoneAnalysisResult"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /design-system:
     get:
       operationId: getDesignSystem
@@ -688,6 +720,74 @@ components:
           type: number
         safeAreaInches:
           type: number
+
+    LabelZone:
+      type: object
+      properties:
+        id:
+          type: string
+        role:
+          type: string
+          enum:
+            - brand-name
+            - product-name
+            - scent-notes
+            - product-type
+            - weight-volume
+            - address
+            - website
+            - disclaimer
+            - date
+            - photo-area
+            - logo-area
+            - decorative-bar
+        text:
+          type: string
+        x:
+          type: number
+        y:
+          type: number
+        w:
+          type: number
+        h:
+          type: number
+        color:
+          type: string
+        fontSize:
+          type: number
+        textAlign:
+          type: string
+          enum: [left, center, right]
+        maxChars:
+          type: integer
+          description: Approximate character capacity based on zone area and font size
+      required:
+        - id
+        - role
+        - text
+        - x
+        - y
+        - w
+        - h
+        - color
+        - fontSize
+        - textAlign
+        - maxChars
+
+    LabelZoneAnalysisResult:
+      type: object
+      properties:
+        zones:
+          type: array
+          items:
+            $ref: "#/components/schemas/LabelZone"
+        brandMatches:
+          type: object
+          additionalProperties:
+            type: string
+      required:
+        - zones
+        - brandMatches
 
     LabelTemplate:
       type: object

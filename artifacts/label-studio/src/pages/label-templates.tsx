@@ -9,6 +9,8 @@ import {
   getGetLabelTemplatesQueryKey,
   getGetDesignSystemQueryKey,
 } from "@workspace/api-client-react";
+import type { LabelZone, LabelTemplate, DesignSystem, LabelSheet } from "@workspace/api-client-react";
+import type { LabelZoneAnalysisResult } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,54 +24,33 @@ import { Separator } from "@/components/ui/separator";
 import {
   LayoutTemplate, Plus, Save, Trash2, Upload, CheckCircle2,
   Circle, Loader2, ChevronDown, ChevronUp, AlertCircle, X,
-  AlignLeft, AlignCenter, AlignRight, ImagePlus,
+  AlignLeft, AlignCenter, AlignRight, ImagePlus, Columns2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── Constants ────────────────────────────────────────────────────────────────
 
-type ZoneRole =
-  | "brand-name" | "product-name" | "scent-notes" | "product-type"
-  | "weight-volume" | "address" | "website" | "disclaimer"
-  | "date" | "photo-area" | "logo-area" | "decorative-bar";
-
-type Zone = {
-  id: string;
-  role: ZoneRole;
-  text: string;
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-  color: string;
-  fontSize: number;
-  textAlign: "left" | "center" | "right";
-};
-
-type AnalysisStep = {
-  label: string;
-  status: "pending" | "running" | "done" | "error";
-};
-
-const ZONE_ROLES: { value: ZoneRole; label: string }[] = [
-  { value: "brand-name", label: "Brand Name" },
-  { value: "product-name", label: "Product Name" },
-  { value: "scent-notes", label: "Scent Notes" },
-  { value: "product-type", label: "Product Type" },
-  { value: "weight-volume", label: "Weight / Volume" },
-  { value: "address", label: "Address" },
-  { value: "website", label: "Website" },
-  { value: "disclaimer", label: "Disclaimer" },
-  { value: "date", label: "Date" },
-  { value: "photo-area", label: "Photo Area" },
-  { value: "logo-area", label: "Logo Area" },
-  { value: "decorative-bar", label: "Decorative Bar" },
+const ZONE_ROLES: { value: LabelZone["role"]; label: string }[] = [
+  { value: "brand-name",     label: "Brand Name"      },
+  { value: "product-name",   label: "Product Name"    },
+  { value: "scent-notes",    label: "Scent Notes"     },
+  { value: "product-type",   label: "Product Type"    },
+  { value: "weight-volume",  label: "Weight / Volume" },
+  { value: "address",        label: "Address"         },
+  { value: "website",        label: "Website"         },
+  { value: "disclaimer",     label: "Disclaimer"      },
+  { value: "date",           label: "Date"            },
+  { value: "photo-area",     label: "Photo Area"      },
+  { value: "logo-area",      label: "Logo Area"       },
+  { value: "decorative-bar", label: "Decorative Bar"  },
 ];
 
-const REQUIRED_ROLES: ZoneRole[] = ["product-name"];
+const REQUIRED_ROLES: LabelZone["role"][] = ["product-name"];
 
-const ROLE_STYLE: Record<ZoneRole, { bg: string; border: string; text: string }> = {
+const NO_TEXT_ROLES: LabelZone["role"][] = ["photo-area", "logo-area", "decorative-bar"];
+
+const ROLE_STYLE: Record<LabelZone["role"], { bg: string; border: string; text: string }> = {
   "brand-name":     { bg: "bg-sky-100/80",      border: "border-sky-500",     text: "text-sky-800"     },
   "product-name":   { bg: "bg-violet-100/80",   border: "border-violet-500",  text: "text-violet-800"  },
   "scent-notes":    { bg: "bg-purple-100/80",   border: "border-purple-500",  text: "text-purple-800"  },
@@ -85,66 +66,94 @@ const ROLE_STYLE: Record<ZoneRole, { bg: string; border: string; text: string }>
 };
 
 const ANALYSIS_STEPS = [
-  "Uploading image...",
-  "Analyzing label design...",
-  "Detecting text zones...",
-  "Extracting zone boundaries...",
-  "Mapping brand fields...",
+  "Uploading file…",
+  "Analyzing label design…",
+  "Detecting text zones…",
+  "Extracting zone boundaries…",
+  "Mapping brand fields…",
 ];
+
+const DEFAULT_ASPECT = 4.75 / 1.25;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function isZoneArray(zones: unknown): zones is Zone[] {
-  return Array.isArray(zones) && (zones.length === 0 || typeof (zones[0] as any)?.x === "number");
+function computeMaxChars(zone: Omit<LabelZone, "maxChars">): number {
+  return Math.max(1, Math.round(zone.w * zone.h * 10000 / (zone.fontSize * zone.fontSize * 0.6)));
 }
 
-function convertLegacyZones(obj: Record<string, any>): Zone[] {
-  return Object.entries(obj).map(([key, z], i) => {
-    const parsePercent = (v: string | number | undefined, fallback: number) => {
-      if (typeof v === "number") return v;
-      if (typeof v === "string") return parseFloat(v) / 100;
-      return fallback;
-    };
-    const roleMap: Record<string, ZoneRole> = {
-      brandName: "brand-name", productName: "product-name", scentNotes: "scent-notes",
-      weight: "weight-volume", ingredients: "disclaimer", logo: "logo-area",
-      website: "website", instructions: "disclaimer",
-    };
-    return {
+function withMaxChars(zone: Omit<LabelZone, "maxChars">): LabelZone {
+  return { ...zone, maxChars: computeMaxChars(zone) } as LabelZone;
+}
+
+function isZoneArray(zones: unknown): zones is LabelZone[] {
+  return Array.isArray(zones) && (zones.length === 0 || typeof (zones as LabelZone[])[0]?.x === "number");
+}
+
+function convertLegacyZones(obj: Record<string, unknown>): LabelZone[] {
+  const parsePercent = (v: unknown, fallback: number) => {
+    if (typeof v === "number") return v;
+    if (typeof v === "string") return parseFloat(v) / 100;
+    return fallback;
+  };
+  const roleMap: Record<string, LabelZone["role"]> = {
+    brandName: "brand-name", productName: "product-name", scentNotes: "scent-notes",
+    weight: "weight-volume", ingredients: "disclaimer", logo: "logo-area",
+    website: "website", instructions: "disclaimer",
+  };
+  return Object.entries(obj).map(([key, val], i) => {
+    const z = (val ?? {}) as Record<string, unknown>;
+    const role = roleMap[key] ?? "product-name";
+    const partial = {
       id: `legacy-${i}-${key}`,
-      role: (roleMap[key] ?? "product-name") as ZoneRole,
-      text: z.text ?? "",
+      role,
+      text: typeof z.text === "string" ? z.text : "",
       x: parsePercent(z.left, 0.05),
       y: parsePercent(z.top, 0.05 + i * 0.15),
       w: parsePercent(z.width, 0.9),
       h: parsePercent(z.height, 0.12),
       color: "#ffffff",
-      fontSize: z.fontSize ? parseInt(z.fontSize) : 10,
-      textAlign: (z.align ?? "left") as "left" | "center" | "right",
+      fontSize: typeof z.fontSize === "string" ? parseInt(z.fontSize) : 10,
+      textAlign: (["left","center","right"].includes(z.align as string) ? z.align : "left") as LabelZone["textAlign"],
     };
+    return withMaxChars(partial);
   });
 }
 
-function computeMaxChars(zone: Zone, canvasW: number, canvasH: number): number {
-  const zoneW = zone.w * canvasW;
-  const zoneH = zone.h * canvasH;
-  return Math.max(1, Math.round((zoneW * zoneH) / (zone.fontSize * zone.fontSize * 0.6)));
+function newZone(id: string): LabelZone {
+  const partial = {
+    id, role: "product-name" as LabelZone["role"],
+    text: "", x: 0.1, y: 0.1, w: 0.4, h: 0.2,
+    color: "#ffffff", fontSize: 12, textAlign: "left" as LabelZone["textAlign"],
+  };
+  return withMaxChars(partial);
 }
 
-function newZone(id: string): Zone {
-  return {
-    id,
-    role: "product-name",
-    text: "",
-    x: 0.1,
-    y: 0.1,
-    w: 0.4,
-    h: 0.2,
-    color: "#ffffff",
-    fontSize: 12,
-    textAlign: "left",
+function hexColorDistance(a: string, b: string): number {
+  const toRgb = (hex: string) => {
+    const c = hex.replace("#", "").padStart(6, "0");
+    return [parseInt(c.slice(0, 2), 16), parseInt(c.slice(2, 4), 16), parseInt(c.slice(4, 6), 16)] as const;
   };
+  const [r1, g1, b1] = toRgb(a);
+  const [r2, g2, b2] = toRgb(b);
+  return Math.sqrt((r1 - r2) ** 2 + (g1 - g2) ** 2 + (b1 - b2) ** 2);
 }
+
+function findBrandColorMatch(color: string, ds: DesignSystem | undefined): string | null {
+  if (!ds || !color.startsWith("#")) return null;
+  const palette = [
+    { name: "primary",    value: ds.primaryColor    },
+    { name: "accent",     value: ds.accentColor     },
+    { name: "secondary",  value: ds.secondaryColor  },
+    { name: "background", value: ds.backgroundColor },
+    { name: "text",       value: ds.textColor       },
+  ];
+  for (const { name, value } of palette) {
+    if (value && hexColorDistance(color, value) < 30) return name;
+  }
+  return null;
+}
+
+type AnalysisStep = { label: string; status: "pending" | "running" | "done" | "error" };
 
 // ─── DropzoneArea ─────────────────────────────────────────────────────────────
 
@@ -198,14 +207,13 @@ function AnalysisProgress({ steps }: { steps: AnalysisStep[] }) {
       <p className="font-medium mb-4">Analyzing your label design…</p>
       {steps.map((s, i) => (
         <div key={i} className="flex items-center gap-3 text-sm">
-          {s.status === "done" && <CheckCircle2 className="w-4 h-4 shrink-0 text-green-500" />}
+          {s.status === "done"    && <CheckCircle2 className="w-4 h-4 shrink-0 text-green-500" />}
           {s.status === "running" && <Loader2 className="w-4 h-4 shrink-0 text-primary animate-spin" />}
           {s.status === "pending" && <Circle className="w-4 h-4 shrink-0 text-muted-foreground/40" />}
-          {s.status === "error" && <AlertCircle className="w-4 h-4 shrink-0 text-destructive" />}
+          {s.status === "error"   && <AlertCircle className="w-4 h-4 shrink-0 text-destructive" />}
           <span className={cn(
-            s.status === "done" ? "text-foreground" :
-            s.status === "running" ? "text-foreground font-medium" :
-            "text-muted-foreground"
+            s.status === "done"    ? "text-foreground" :
+            s.status === "running" ? "text-foreground font-medium" : "text-muted-foreground"
           )}>{s.label}</span>
         </div>
       ))}
@@ -216,121 +224,103 @@ function AnalysisProgress({ steps }: { steps: AnalysisStep[] }) {
 // ─── ZoneCanvas ───────────────────────────────────────────────────────────────
 
 type ZoneCanvasProps = {
-  zones: Zone[];
+  zones: LabelZone[];
   selectedId: string | null;
   onSelect: (id: string | null) => void;
-  onChange: (zones: Zone[]) => void;
+  onChange?: (zones: LabelZone[]) => void;
   imageUrl?: string;
   canvasW: number;
   canvasH: number;
+  readOnly?: boolean;
+  label?: string;
 };
 
-function ZoneCanvas({ zones, selectedId, onSelect, onChange, imageUrl, canvasW, canvasH }: ZoneCanvasProps) {
+function ZoneCanvas({ zones, selectedId, onSelect, onChange, imageUrl, canvasW, canvasH, readOnly, label }: ZoneCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const dragState = useRef<{
     type: "drag" | "resize";
     zoneId: string;
     startClientX: number;
     startClientY: number;
-    startZone: Zone;
+    startZone: LabelZone;
     canvasRect: DOMRect;
   } | null>(null);
 
-  const startDrag = useCallback((e: React.PointerEvent, zone: Zone, type: "drag" | "resize") => {
+  const startDrag = useCallback((e: React.PointerEvent, zone: LabelZone, type: "drag" | "resize") => {
+    if (readOnly) return;
     e.stopPropagation();
     e.currentTarget.setPointerCapture(e.pointerId);
     const canvasRect = containerRef.current!.getBoundingClientRect();
-    dragState.current = {
-      type,
-      zoneId: zone.id,
-      startClientX: e.clientX,
-      startClientY: e.clientY,
-      startZone: { ...zone },
-      canvasRect,
-    };
-  }, []);
+    dragState.current = { type, zoneId: zone.id, startClientX: e.clientX, startClientY: e.clientY, startZone: { ...zone }, canvasRect };
+  }, [readOnly]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
     const ds = dragState.current;
-    if (!ds) return;
+    if (!ds || !onChange) return;
     const dx = (e.clientX - ds.startClientX) / ds.canvasRect.width;
     const dy = (e.clientY - ds.startClientY) / ds.canvasRect.height;
     onChange(zones.map(z => {
       if (z.id !== ds.zoneId) return z;
+      let updated: Omit<LabelZone, "maxChars">;
       if (ds.type === "drag") {
-        return {
-          ...z,
-          x: Math.max(0, Math.min(1 - z.w, ds.startZone.x + dx)),
-          y: Math.max(0, Math.min(1 - z.h, ds.startZone.y + dy)),
-        };
+        updated = { ...z, x: Math.max(0, Math.min(1 - z.w, ds.startZone.x + dx)), y: Math.max(0, Math.min(1 - z.h, ds.startZone.y + dy)) };
       } else {
-        return {
-          ...z,
-          w: Math.max(0.05, Math.min(1 - z.x, ds.startZone.w + dx)),
-          h: Math.max(0.03, Math.min(1 - z.y, ds.startZone.h + dy)),
-        };
+        updated = { ...z, w: Math.max(0.05, Math.min(1 - z.x, ds.startZone.w + dx)), h: Math.max(0.03, Math.min(1 - z.y, ds.startZone.h + dy)) };
       }
+      return withMaxChars(updated);
     }));
   }, [zones, onChange]);
 
-  const handlePointerUp = useCallback(() => {
-    dragState.current = null;
-  }, []);
+  const handlePointerUp = useCallback(() => { dragState.current = null; }, []);
 
   return (
-    <div
-      ref={containerRef}
-      className="relative bg-white border-2 border-muted shadow-xl select-none"
-      style={{ width: canvasW, height: canvasH }}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerUp}
-      onClick={() => onSelect(null)}
-    >
-      {imageUrl && (
-        <img
-          src={imageUrl}
-          alt="Label reference"
-          className="absolute inset-0 w-full h-full object-cover opacity-30 pointer-events-none"
-        />
-      )}
-
-      {zones.map(zone => {
-        const style = ROLE_STYLE[zone.role] ?? ROLE_STYLE["product-name"];
-        const isSelected = selectedId === zone.id;
-        const maxChars = computeMaxChars(zone, canvasW, canvasH);
-        const charRatio = zone.text ? zone.text.length / maxChars : 0;
-        const overflow = charRatio > 1;
-
-        return (
-          <div
-            key={zone.id}
-            className={cn(
-              "absolute border-2 cursor-move flex items-center justify-center overflow-hidden",
-              style.bg, isSelected ? "border-foreground shadow-lg ring-2 ring-offset-1 ring-foreground/50" : `${style.border} border-dashed`,
-              overflow && "ring-2 ring-red-500"
-            )}
-            style={{
-              left: zone.x * canvasW,
-              top: zone.y * canvasH,
-              width: zone.w * canvasW,
-              height: zone.h * canvasH,
-            }}
-            onClick={e => { e.stopPropagation(); onSelect(zone.id); }}
-            onPointerDown={e => { onSelect(zone.id); startDrag(e, zone, "drag"); }}
-          >
-            <span className={cn("text-[9px] font-semibold px-1 truncate leading-tight", style.text)}>
-              {zone.text || ZONE_ROLES.find(r => r.value === zone.role)?.label || zone.role}
-            </span>
-
-            {isSelected && (
-              <div
-                className="absolute bottom-0 right-0 w-4 h-4 bg-foreground cursor-se-resize rounded-tl-sm"
-                onPointerDown={e => { e.stopPropagation(); startDrag(e, zone, "resize"); }}
-              />
-            )}
-          </div>
-        );
-      })}
+    <div className="flex flex-col items-center gap-1">
+      {label && <p className="text-xs text-muted-foreground font-medium">{label}</p>}
+      <div
+        ref={containerRef}
+        className="relative bg-white border-2 border-muted shadow-xl select-none"
+        style={{ width: canvasW, height: canvasH }}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onClick={() => !readOnly && onSelect(null)}
+      >
+        {imageUrl && (
+          <img
+            src={imageUrl}
+            alt="Label reference"
+            className="absolute inset-0 w-full h-full object-cover opacity-30 pointer-events-none"
+          />
+        )}
+        {zones.map(zone => {
+          const style = ROLE_STYLE[zone.role];
+          const isSelected = selectedId === zone.id;
+          const charRatio = zone.text ? zone.text.length / zone.maxChars : 0;
+          return (
+            <div
+              key={zone.id}
+              className={cn(
+                "absolute border-2 cursor-move flex items-center justify-center overflow-hidden",
+                style.bg,
+                isSelected ? "border-foreground shadow-lg ring-2 ring-offset-1 ring-foreground/50" : `${style.border} border-dashed`,
+                charRatio > 1 && "ring-2 ring-red-500"
+              )}
+              style={{ left: zone.x * canvasW, top: zone.y * canvasH, width: zone.w * canvasW, height: zone.h * canvasH }}
+              onClick={e => { e.stopPropagation(); if (!readOnly) onSelect(zone.id); }}
+              onPointerDown={e => { if (!readOnly) { onSelect(zone.id); startDrag(e, zone, "drag"); } }}
+            >
+              <span className={cn("text-[9px] font-semibold px-1 truncate leading-tight", style.text)}>
+                {zone.text || ZONE_ROLES.find(r => r.value === zone.role)?.label || zone.role}
+              </span>
+              {isSelected && !readOnly && (
+                <div
+                  className="absolute bottom-0 right-0 w-4 h-4 bg-foreground cursor-se-resize rounded-tl-sm"
+                  onPointerDown={e => { e.stopPropagation(); startDrag(e, zone, "resize"); }}
+                />
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -338,19 +328,23 @@ function ZoneCanvas({ zones, selectedId, onSelect, onChange, imageUrl, canvasW, 
 // ─── ZonePanel ────────────────────────────────────────────────────────────────
 
 type ZonePanelProps = {
-  zone: Zone;
-  onChange: (updated: Zone) => void;
+  zone: LabelZone;
+  onChange: (updated: LabelZone) => void;
   onDelete: () => void;
-  canvasW: number;
-  canvasH: number;
   brandFields: Record<string, string>;
+  designSystem: DesignSystem | undefined;
 };
 
-function ZonePanel({ zone, onChange, onDelete, canvasW, canvasH, brandFields }: ZonePanelProps) {
-  const maxChars = computeMaxChars(zone, canvasW, canvasH);
+function ZonePanel({ zone, onChange, onDelete, brandFields, designSystem }: ZonePanelProps) {
   const charCount = zone.text?.length ?? 0;
-  const charRatio = charCount / maxChars;
+  const charRatio = charCount / zone.maxChars;
   const brandMatch = Object.entries(brandFields).find(([, v]) => v && zone.text && zone.text.trim().toLowerCase() === v.trim().toLowerCase());
+  const brandColorMatch = findBrandColorMatch(zone.color, designSystem);
+
+  const update = (partial: Partial<Omit<LabelZone, "id" | "maxChars">>) => {
+    const merged = { ...zone, ...partial };
+    onChange(withMaxChars(merged));
+  };
 
   return (
     <div className="space-y-4">
@@ -363,7 +357,7 @@ function ZonePanel({ zone, onChange, onDelete, canvasW, canvasH, brandFields }: 
 
       <div className="space-y-1.5">
         <Label className="text-xs">Role</Label>
-        <Select value={zone.role} onValueChange={v => onChange({ ...zone, role: v as ZoneRole })}>
+        <Select value={zone.role} onValueChange={v => update({ role: v as LabelZone["role"] })}>
           <SelectTrigger className="h-8 text-xs">
             <SelectValue />
           </SelectTrigger>
@@ -375,7 +369,7 @@ function ZonePanel({ zone, onChange, onDelete, canvasW, canvasH, brandFields }: 
         </Select>
       </div>
 
-      {zone.role !== "photo-area" && zone.role !== "logo-area" && zone.role !== "decorative-bar" && (
+      {!NO_TEXT_ROLES.includes(zone.role) && (
         <>
           <div className="space-y-1.5">
             <Label className="text-xs">Content text</Label>
@@ -392,12 +386,12 @@ function ZonePanel({ zone, onChange, onDelete, canvasW, canvasH, brandFields }: 
             <Textarea
               className="text-xs resize-none h-16 font-mono"
               value={zone.text}
-              onChange={e => onChange({ ...zone, text: e.target.value })}
+              onChange={e => update({ text: e.target.value })}
               placeholder={`Enter ${ZONE_ROLES.find(r => r.value === zone.role)?.label ?? zone.role}…`}
             />
             <div className="flex items-center justify-between text-[10px]">
               <span className={cn("font-mono", charRatio > 1 ? "text-red-500 font-semibold" : charRatio > 0.8 ? "text-amber-500" : "text-muted-foreground")}>
-                {charCount} / ~{maxChars} chars
+                {charCount} / ~{zone.maxChars} chars
               </span>
               {charRatio > 0 && (
                 <div className="w-24 h-1.5 bg-muted rounded-full overflow-hidden">
@@ -413,17 +407,16 @@ function ZonePanel({ zone, onChange, onDelete, canvasW, canvasH, brandFields }: 
           <div className="space-y-1.5">
             <Label className="text-xs">Text align</Label>
             <div className="flex gap-1">
-              {(["left", "center", "right"] as const).map(align => (
+              {(["left", "center", "right"] as LabelZone["textAlign"][]).map(align => (
                 <Button
-                  key={align}
-                  size="icon"
+                  key={align} size="icon"
                   variant={zone.textAlign === align ? "default" : "outline"}
                   className="h-7 w-8"
-                  onClick={() => onChange({ ...zone, textAlign: align })}
+                  onClick={() => update({ textAlign: align })}
                 >
-                  {align === "left" && <AlignLeft className="w-3 h-3" />}
+                  {align === "left"   && <AlignLeft   className="w-3 h-3" />}
                   {align === "center" && <AlignCenter className="w-3 h-3" />}
-                  {align === "right" && <AlignRight className="w-3 h-3" />}
+                  {align === "right"  && <AlignRight  className="w-3 h-3" />}
                 </Button>
               ))}
             </div>
@@ -434,7 +427,7 @@ function ZonePanel({ zone, onChange, onDelete, canvasW, canvasH, brandFields }: 
             <Slider
               min={6} max={32} step={1}
               value={[zone.fontSize]}
-              onValueChange={([v]) => onChange({ ...zone, fontSize: v })}
+              onValueChange={([v]) => update({ fontSize: v })}
               className="py-1"
             />
           </div>
@@ -442,18 +435,23 @@ function ZonePanel({ zone, onChange, onDelete, canvasW, canvasH, brandFields }: 
       )}
 
       <div className="space-y-1.5">
-        <Label className="text-xs">Zone color</Label>
+        <Label className="text-xs">Zone background color</Label>
+        {brandColorMatch && (
+          <Badge variant="secondary" className="text-[10px] mb-1 gap-1 bg-blue-50 text-blue-700 border-blue-200">
+            <CheckCircle2 className="w-3 h-3" /> Matches brand {brandColorMatch} color
+          </Badge>
+        )}
         <div className="flex gap-2 items-center">
           <input
             type="color"
             value={zone.color}
-            onChange={e => onChange({ ...zone, color: e.target.value })}
+            onChange={e => update({ color: e.target.value })}
             className="h-8 w-10 p-0.5 border rounded cursor-pointer"
           />
           <Input
             className="h-8 text-xs font-mono flex-1"
             value={zone.color}
-            onChange={e => onChange({ ...zone, color: e.target.value })}
+            onChange={e => update({ color: e.target.value })}
           />
         </div>
       </div>
@@ -465,27 +463,34 @@ function ZonePanel({ zone, onChange, onDelete, canvasW, canvasH, brandFields }: 
           <div key={prop} className="space-y-1">
             <Label className="text-[10px] uppercase font-mono text-muted-foreground">{prop}</Label>
             <Input
-              type="number"
-              min={0} max={1} step={0.01}
+              type="number" min={0} max={1} step={0.01}
               className="h-7 text-xs font-mono"
               value={zone[prop].toFixed(3)}
               onChange={e => {
                 const v = Math.max(0, Math.min(1, parseFloat(e.target.value) || 0));
-                onChange({ ...zone, [prop]: v });
+                update({ [prop]: v });
               }}
             />
           </div>
         ))}
       </div>
+
+      <div className="text-[10px] text-muted-foreground font-mono">
+        ~{zone.maxChars} char capacity
+      </div>
     </div>
   );
 }
 
-// ─── Mini template card for grid ─────────────────────────────────────────────
+// ─── TemplateCard ─────────────────────────────────────────────────────────────
 
-function TemplateCard({ template, onClick, active }: { template: any; onClick: () => void; active: boolean }) {
-  const zones: Zone[] = isZoneArray(template.zones) ? template.zones : convertLegacyZones(template.zones ?? {});
-  const aspect = 4.75 / 1.25;
+function TemplateCard({ template, onClick, active }: { template: LabelTemplate; onClick: () => void; active: boolean }) {
+  const rawZones = template.zones;
+  const zones: LabelZone[] = isZoneArray(rawZones)
+    ? (rawZones as LabelZone[])
+    : convertLegacyZones((rawZones ?? {}) as Record<string, unknown>);
+
+  const aspect = DEFAULT_ASPECT;
   const cardW = 200;
   const cardH = Math.round(cardW / aspect);
 
@@ -499,7 +504,7 @@ function TemplateCard({ template, onClick, active }: { template: any; onClick: (
     >
       <div className="relative bg-white" style={{ width: cardW, height: cardH }}>
         {zones.map(z => {
-          const s = ROLE_STYLE[z.role] ?? ROLE_STYLE["product-name"];
+          const s = ROLE_STYLE[z.role];
           return (
             <div
               key={z.id}
@@ -520,6 +525,11 @@ function TemplateCard({ template, onClick, active }: { template: any; onClick: (
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 type EditorMode = "idle" | "uploading" | "editing" | "creating";
+
+function sheetAspect(sheet: LabelSheet | undefined): number {
+  if (!sheet) return DEFAULT_ASPECT;
+  return sheet.labelWidth / sheet.labelHeight;
+}
 
 export default function LabelTemplates() {
   const { data: templates, isLoading } = useGetLabelTemplates({ query: { queryKey: getGetLabelTemplatesQueryKey() } });
@@ -560,7 +570,7 @@ export default function LabelTemplates() {
 
   const [mode, setMode] = useState<EditorMode>("idle");
   const [activeTemplateId, setActiveTemplateId] = useState<number | null>(null);
-  const [zones, setZones] = useState<Zone[]>([]);
+  const [zones, setZones] = useState<LabelZone[]>([]);
   const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState<string | undefined>();
   const [analysisSteps, setAnalysisSteps] = useState<AnalysisStep[]>([]);
@@ -572,25 +582,37 @@ export default function LabelTemplates() {
   const [showAdvancedJson, setShowAdvancedJson] = useState(false);
   const [jsonText, setJsonText] = useState("");
 
-  const activeTemplate = templates?.find(t => t.id === activeTemplateId) ?? null;
   const selectedZone = zones.find(z => z.id === selectedZoneId) ?? null;
 
   const brandFields: Record<string, string> = {
-    brandName: designSystem?.brandName ?? "",
-    address: designSystem?.address ?? "",
+    brandName:  designSystem?.brandName  ?? "",
+    address:    designSystem?.address    ?? "",
     websiteUrl: designSystem?.websiteUrl ?? "",
   };
 
-  const displaySheet = sheets?.find(s => s.id.toString() === (previewSheetId !== "none" ? previewSheetId : labelSheetId));
-  const CANVAS_W = 560;
-  const aspect = displaySheet ? displaySheet.labelWidth / displaySheet.labelHeight : 4.75 / 1.25;
-  const CANVAS_H = Math.round(CANVAS_W / aspect);
+  const assignedSheet = sheets?.find(s => s.id.toString() === labelSheetId);
+  const previewSheet  = sheets?.find(s => s.id.toString() === previewSheetId);
+
+  const isSideBySide = previewSheetId !== "none" && previewSheetId !== labelSheetId;
+
+  const CANVAS_W_SINGLE = 560;
+  const CANVAS_W_SIDE   = 268;
+
+  const mainCanvasW = isSideBySide ? CANVAS_W_SIDE : CANVAS_W_SINGLE;
+  const mainAspect  = sheetAspect(assignedSheet);
+  const mainCanvasH = Math.round(mainCanvasW / mainAspect);
+
+  const previewAspect  = sheetAspect(previewSheet);
+  const previewCanvasH = Math.round(CANVAS_W_SIDE / previewAspect);
+
+  const isEditing = mode === "editing" || mode === "creating";
+  const isSaving  = createMutation.isPending || updateMutation.isPending;
 
   useEffect(() => {
     if (showAdvancedJson) setJsonText(JSON.stringify(zones, null, 2));
   }, [showAdvancedJson, zones]);
 
-  const loadTemplate = (t: any) => {
+  const loadTemplate = (t: LabelTemplate) => {
     setMode("editing");
     setActiveTemplateId(t.id);
     setTemplateName(t.name);
@@ -601,9 +623,9 @@ export default function LabelTemplates() {
     setSelectedZoneId(null);
     const rawZones = t.zones;
     if (isZoneArray(rawZones)) {
-      setZones(rawZones);
-    } else if (rawZones && typeof rawZones === "object") {
-      setZones(convertLegacyZones(rawZones as Record<string, any>));
+      setZones(rawZones as LabelZone[]);
+    } else if (rawZones && typeof rawZones === "object" && !Array.isArray(rawZones)) {
+      setZones(convertLegacyZones(rawZones as Record<string, unknown>));
     } else {
       setZones([]);
     }
@@ -619,22 +641,24 @@ export default function LabelTemplates() {
     setImageUrl(undefined);
     setSelectedZoneId(null);
     setZones([
-      { id: crypto.randomUUID(), role: "brand-name",    text: designSystem?.brandName ?? "", x: 0.03, y: 0.03, w: 0.45, h: 0.12, color: "#ffffff", fontSize: 8,  textAlign: "left" },
-      { id: crypto.randomUUID(), role: "product-name",  text: "",                             x: 0.03, y: 0.18, w: 0.45, h: 0.30, color: "#ffffff", fontSize: 18, textAlign: "left" },
-      { id: crypto.randomUUID(), role: "scent-notes",   text: "",                             x: 0.03, y: 0.52, w: 0.45, h: 0.14, color: "#ffffff", fontSize: 9,  textAlign: "left" },
-      { id: crypto.randomUUID(), role: "weight-volume", text: "",                             x: 0.03, y: 0.70, w: 0.45, h: 0.10, color: "#ffffff", fontSize: 8,  textAlign: "left" },
-      { id: crypto.randomUUID(), role: "photo-area",    text: "",                             x: 0.55, y: 0.0,  w: 0.45, h: 1.0,  color: "#e8e4de", fontSize: 8,  textAlign: "center" },
+      withMaxChars({ id: crypto.randomUUID(), role: "brand-name",    text: designSystem?.brandName ?? "", x: 0.03, y: 0.03, w: 0.45, h: 0.12, color: "#ffffff", fontSize: 8,  textAlign: "left"   }),
+      withMaxChars({ id: crypto.randomUUID(), role: "product-name",  text: "",                             x: 0.03, y: 0.18, w: 0.45, h: 0.30, color: "#ffffff", fontSize: 18, textAlign: "left"   }),
+      withMaxChars({ id: crypto.randomUUID(), role: "scent-notes",   text: "",                             x: 0.03, y: 0.52, w: 0.45, h: 0.14, color: "#ffffff", fontSize: 9,  textAlign: "left"   }),
+      withMaxChars({ id: crypto.randomUUID(), role: "weight-volume", text: "",                             x: 0.03, y: 0.70, w: 0.45, h: 0.10, color: "#ffffff", fontSize: 8,  textAlign: "left"   }),
+      withMaxChars({ id: crypto.randomUUID(), role: "photo-area",    text: "",                             x: 0.55, y: 0.0,  w: 0.45, h: 1.0,  color: "#e8e4de", fontSize: 8,  textAlign: "center" }),
     ]);
   };
 
   const runAnalysis = async (file: File) => {
     setMode("uploading");
-    setImageUrl(URL.createObjectURL(file));
+    if (file.type !== "application/pdf") {
+      setImageUrl(URL.createObjectURL(file));
+    }
     setActiveTemplateId(null);
     setSelectedZoneId(null);
     setTemplateName(file.name.replace(/\.[^.]+$/, "").replace(/[-_]/g, " "));
 
-    const steps: AnalysisStep[] = ANALYSIS_STEPS.map(label => ({ label, status: "pending" }));
+    const steps: AnalysisStep[] = ANALYSIS_STEPS.map(label => ({ label, status: "pending" as const }));
     setAnalysisSteps([...steps]);
 
     const stepInterval = setInterval(() => {
@@ -656,37 +680,44 @@ export default function LabelTemplates() {
       const res = await fetch("/api/label-templates/analyze", { method: "POST", body: formData });
       clearInterval(stepInterval);
       if (!res.ok) throw new Error(`Analysis failed: ${res.status}`);
-      const { zones: detected, brandMatches } = await res.json();
+      const result: LabelZoneAnalysisResult = await res.json();
+      const { zones: detected, brandMatches } = result;
 
-      setAnalysisSteps(prev => prev.map(s => ({ ...s, status: "done" })));
+      setAnalysisSteps(prev => prev.map(s => ({ ...s, status: "done" as const })));
 
-      const mapped: Zone[] = detected.map((z: Zone) => {
+      const mapped: LabelZone[] = detected.map(z => {
         let text = z.text;
         if (z.role === "brand-name" && !text && brandFields.brandName) text = brandFields.brandName;
+        if (z.role === "brand-name" && brandMatches?.brandName && designSystem?.brandName) text = designSystem.brandName;
         if (z.role === "address" && !text && brandFields.address) text = brandFields.address;
         if (z.role === "website" && !text && brandFields.websiteUrl) text = brandFields.websiteUrl;
-        if (z.role === "brand-name" && brandMatches?.brandName && designSystem?.brandName) text = designSystem.brandName;
         return { ...z, text };
       });
 
-      await new Promise(r => setTimeout(r, 500));
+      await new Promise<void>(r => setTimeout(r, 500));
       setZones(mapped);
       setMode("creating");
-    } catch (err) {
+    } catch (err: unknown) {
       clearInterval(stepInterval);
-      setAnalysisSteps(prev => prev.map((s, i) => i === prev.findIndex(x => x.status === "running") ? { ...s, status: "error" } : s));
+      setAnalysisSteps(prev => {
+        const updated = [...prev];
+        const ri = updated.findIndex(s => s.status === "running");
+        if (ri !== -1) updated[ri] = { ...updated[ri], status: "error" };
+        return updated;
+      });
       toast({ title: "Analysis failed", description: "Using blank template instead.", variant: "destructive" });
-      await new Promise(r => setTimeout(r, 800));
+      await new Promise<void>(r => setTimeout(r, 800));
       startNewBlank();
     }
   };
 
   const handleSave = () => {
+    const zonesWithMaxChars = zones.map(z => withMaxChars(z));
     const payload = {
       name: templateName,
       description: templateDescription || undefined,
       labelSheetId: labelSheetId === "none" ? undefined : parseInt(labelSheetId),
-      zones: zones as unknown,
+      zones: zonesWithMaxChars as unknown,
       safeAreaEnabled,
     };
     if (activeTemplateId) {
@@ -707,12 +738,9 @@ export default function LabelTemplates() {
     setSelectedZoneId(null);
   };
 
-  const handleUpdateZone = useCallback((updated: Zone) => {
-    setZones(prev => prev.map(z => z.id === updated.id ? updated : z));
+  const handleUpdateZone = useCallback((updated: LabelZone) => {
+    setZones(prev => prev.map(z => z.id === updated.id ? withMaxChars(updated) : z));
   }, []);
-
-  const isEditing = mode === "editing" || mode === "creating";
-  const isSaving = createMutation.isPending || updateMutation.isPending;
 
   return (
     <div className="flex flex-col h-[calc(100vh-120px)] animate-in fade-in duration-500">
@@ -768,7 +796,7 @@ export default function LabelTemplates() {
                   <LayoutTemplate className="w-12 h-12 mx-auto mb-4 text-muted-foreground/30" />
                   <h2 className="text-xl font-semibold mb-2">Design your label layout</h2>
                   <p className="text-sm text-muted-foreground">
-                    Upload an existing label image and we'll detect the zones automatically, or start from a blank template.
+                    Upload an existing label image or PDF and we'll detect zones automatically, or start blank.
                   </p>
                 </div>
                 <DropzoneArea onFile={runAnalysis} />
@@ -812,20 +840,25 @@ export default function LabelTemplates() {
                     ))}
                   </SelectContent>
                 </Select>
+
                 <div className="flex items-center gap-1.5 ml-auto">
-                  <span className="text-xs text-muted-foreground">Preview on:</span>
+                  <Columns2 className="w-3.5 h-3.5 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">Compare with:</span>
                   <Select value={previewSheetId} onValueChange={setPreviewSheetId}>
-                    <SelectTrigger className="h-8 w-40 text-xs">
-                      <SelectValue placeholder="Same sheet" />
+                    <SelectTrigger className="h-8 w-44 text-xs">
+                      <SelectValue placeholder="— same sheet —" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none" className="text-xs">Same sheet</SelectItem>
+                      <SelectItem value="none" className="text-xs">— same sheet —</SelectItem>
                       {sheets?.map(s => (
-                        <SelectItem key={s.id} value={s.id.toString()} className="text-xs">{s.code} {s.labelWidth}"×{s.labelHeight}"</SelectItem>
+                        <SelectItem key={s.id} value={s.id.toString()} className="text-xs">
+                          {s.code} — {s.labelWidth}"×{s.labelHeight}"
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
+
                 {activeTemplateId && (
                   <Button
                     variant="ghost" size="icon" className="h-8 w-8 shrink-0 text-destructive hover:bg-destructive/10"
@@ -838,28 +871,34 @@ export default function LabelTemplates() {
 
               <div className="flex flex-1 overflow-hidden">
                 {/* Canvas area */}
-                <div className="flex-1 bg-secondary/30 overflow-auto flex items-center justify-center p-8 checkerboard-bg relative">
+                <div className="flex-1 bg-secondary/30 overflow-auto flex items-center justify-center p-8 checkerboard-bg">
                   <div className="flex flex-col items-center gap-4">
-                    {imageUrl && mode === "editing" && (
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <ImagePlus className="w-3.5 h-3.5" />
-                        Reference image overlay active
-                      </div>
-                    )}
-                    <ZoneCanvas
-                      zones={zones}
-                      selectedId={selectedZoneId}
-                      onSelect={setSelectedZoneId}
-                      onChange={setZones}
-                      imageUrl={imageUrl}
-                      canvasW={CANVAS_W}
-                      canvasH={CANVAS_H}
-                    />
+                    <div className={cn("flex gap-5 items-start", isSideBySide && "flex-row")}>
+                      <ZoneCanvas
+                        zones={zones}
+                        selectedId={selectedZoneId}
+                        onSelect={setSelectedZoneId}
+                        onChange={setZones}
+                        imageUrl={imageUrl}
+                        canvasW={mainCanvasW}
+                        canvasH={mainCanvasH}
+                        label={isSideBySide ? (assignedSheet ? `${assignedSheet.code} (assigned)` : "Current sheet") : undefined}
+                      />
+                      {isSideBySide && previewSheet && (
+                        <ZoneCanvas
+                          zones={zones}
+                          selectedId={null}
+                          onSelect={() => {}}
+                          canvasW={CANVAS_W_SIDE}
+                          canvasH={previewCanvasH}
+                          readOnly
+                          label={`${previewSheet.code} — ${previewSheet.labelWidth}"×${previewSheet.labelHeight}"`}
+                        />
+                      )}
+                    </div>
                     <div className="text-xs text-muted-foreground">
-                      {CANVAS_W / 72 > 0 ? `${displaySheet?.labelWidth ?? "?"}"×${displaySheet?.labelHeight ?? "?"}"`  : "Custom"} label
-                      {" · "}
-                      {zones.length} zone{zones.length !== 1 ? "s" : ""}
-                      {selectedZone && <> · <span className="text-foreground font-medium">Click zone to edit · drag to move · corner to resize</span></>}
+                      {assignedSheet ? `${assignedSheet.labelWidth}"×${assignedSheet.labelHeight}"` : "Custom aspect"} · {zones.length} zone{zones.length !== 1 ? "s" : ""}
+                      {!selectedZone && <> · <span className="text-foreground/60">Click zone to edit · drag to move · corner handle to resize</span></>}
                     </div>
                   </div>
                 </div>
@@ -872,9 +911,8 @@ export default function LabelTemplates() {
                         zone={selectedZone}
                         onChange={handleUpdateZone}
                         onDelete={() => handleDeleteZone(selectedZone.id)}
-                        canvasW={CANVAS_W}
-                        canvasH={CANVAS_H}
                         brandFields={brandFields}
+                        designSystem={designSystem}
                       />
                     </div>
                   ) : (
@@ -902,10 +940,10 @@ export default function LabelTemplates() {
                       <div className="space-y-2">
                         <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Zones</Label>
                         {zones.length === 0 && (
-                          <p className="text-xs text-muted-foreground">No zones yet. Upload an image to auto-detect, or click "Add Zone".</p>
+                          <p className="text-xs text-muted-foreground">No zones. Upload a label or click "Add Zone".</p>
                         )}
                         {zones.map(z => {
-                          const s = ROLE_STYLE[z.role] ?? ROLE_STYLE["product-name"];
+                          const s = ROLE_STYLE[z.role];
                           const required = REQUIRED_ROLES.includes(z.role) && !z.text;
                           return (
                             <button
@@ -959,9 +997,9 @@ export default function LabelTemplates() {
                         onChange={e => setJsonText(e.target.value)}
                         onBlur={() => {
                           try {
-                            const parsed = JSON.parse(jsonText);
-                            if (Array.isArray(parsed)) setZones(parsed);
-                          } catch { /* ignore parse errors while typing */ }
+                            const parsed: unknown = JSON.parse(jsonText);
+                            if (Array.isArray(parsed)) setZones(parsed as LabelZone[]);
+                          } catch { /* ignore while editing */ }
                         }}
                       />
                     )}

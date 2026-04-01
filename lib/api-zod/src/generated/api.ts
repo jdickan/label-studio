@@ -314,6 +314,51 @@ export const DeleteLabelTemplateParams = zod.object({
 });
 
 /**
+ * @summary Analyze a label image or PDF and return detected zones
+ */
+export const AnalyzeLabelTemplateBody = zod.object({
+  image: zod
+    .instanceof(File)
+    .describe("Label image (JPEG, PNG, WebP) or single-page PDF"),
+});
+
+export const AnalyzeLabelTemplateResponse = zod.object({
+  zones: zod.array(
+    zod.object({
+      id: zod.string(),
+      role: zod.enum([
+        "brand-name",
+        "product-name",
+        "scent-notes",
+        "product-type",
+        "weight-volume",
+        "address",
+        "website",
+        "disclaimer",
+        "date",
+        "photo-area",
+        "logo-area",
+        "decorative-bar",
+      ]),
+      text: zod.string(),
+      x: zod.number(),
+      y: zod.number(),
+      w: zod.number(),
+      h: zod.number(),
+      color: zod.string(),
+      fontSize: zod.number(),
+      textAlign: zod.enum(["left", "center", "right"]),
+      maxChars: zod
+        .number()
+        .describe(
+          "Approximate character capacity based on zone area and font size",
+        ),
+    }),
+  ),
+  brandMatches: zod.record(zod.string(), zod.string()),
+});
+
+/**
  * @summary Get the current brand design system
  */
 export const GetDesignSystemResponse = zod.object({

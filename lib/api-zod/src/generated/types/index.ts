@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./analyzeLabelTemplateBody";
 export * from "./createLabelSheetBody";
 export * from "./createLabelSheetBodyShape";
 export * from "./createLabelTemplateBody";
@@ -22,6 +23,11 @@ export * from "./healthStatus";
 export * from "./labelSheet";
 export * from "./labelSheetShape";
 export * from "./labelTemplate";
+export * from "./labelZone";
+export * from "./labelZoneAnalysisResult";
+export * from "./labelZoneAnalysisResultBrandMatches";
+export * from "./labelZoneRole";
+export * from "./labelZoneTextAlign";
 export * from "./printJob";
 export * from "./printJobItem";
 export * from "./printJobJobType";

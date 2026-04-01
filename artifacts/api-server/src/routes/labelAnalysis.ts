@@ -63,13 +63,21 @@ Rules:
 - The "photo-area" is typically the right portion of candle labels
 - Return ONLY the JSON array, no markdown, no explanation, no code fences`;
 
+function maxChars(zone: Omit<Zone, "maxChars">): number {
+  return Math.max(1, Math.round(zone.w * zone.h * 10000 / (zone.fontSize * zone.fontSize * 0.6)));
+}
+
+function withMaxChars(zone: Omit<Zone, "maxChars">): Zone {
+  return { ...zone, maxChars: maxChars(zone) } as Zone;
+}
+
 function buildDefaultScaffold(): Zone[] {
   return [
-    { id: randomUUID(), role: "brand-name",    text: "", x: 0.03, y: 0.03, w: 0.45, h: 0.12, color: "#ffffff", fontSize: 8,  textAlign: "left" },
-    { id: randomUUID(), role: "product-name",  text: "", x: 0.03, y: 0.18, w: 0.45, h: 0.30, color: "#ffffff", fontSize: 18, textAlign: "left" },
-    { id: randomUUID(), role: "scent-notes",   text: "", x: 0.03, y: 0.52, w: 0.45, h: 0.14, color: "#ffffff", fontSize: 9,  textAlign: "left" },
-    { id: randomUUID(), role: "weight-volume", text: "", x: 0.03, y: 0.70, w: 0.45, h: 0.10, color: "#ffffff", fontSize: 8,  textAlign: "left" },
-    { id: randomUUID(), role: "photo-area",    text: "", x: 0.55, y: 0.0,  w: 0.45, h: 1.0,  color: "#e0d8cc", fontSize: 8, textAlign: "center" },
+    withMaxChars({ id: randomUUID(), role: "brand-name",    text: "", x: 0.03, y: 0.03, w: 0.45, h: 0.12, color: "#ffffff", fontSize: 8,  textAlign: "left"   }),
+    withMaxChars({ id: randomUUID(), role: "product-name",  text: "", x: 0.03, y: 0.18, w: 0.45, h: 0.30, color: "#ffffff", fontSize: 18, textAlign: "left"   }),
+    withMaxChars({ id: randomUUID(), role: "scent-notes",   text: "", x: 0.03, y: 0.52, w: 0.45, h: 0.14, color: "#ffffff", fontSize: 9,  textAlign: "left"   }),
+    withMaxChars({ id: randomUUID(), role: "weight-volume", text: "", x: 0.03, y: 0.70, w: 0.45, h: 0.10, color: "#ffffff", fontSize: 8,  textAlign: "left"   }),
+    withMaxChars({ id: randomUUID(), role: "photo-area",    text: "", x: 0.55, y: 0.0,  w: 0.45, h: 1.0,  color: "#e0d8cc", fontSize: 8, textAlign: "center" }),
   ];
 }
 
@@ -84,6 +92,7 @@ type Zone = {
   color: string;
   fontSize: number;
   textAlign: "left" | "center" | "right";
+  maxChars: number;
 };
 
 async function pdfToBase64Png(buffer: Buffer): Promise<{ base64: string; mimeType: string }> {
@@ -173,18 +182,21 @@ router.post("/analyze", upload.single("image"), async (req, res) => {
 
     zones = (parsed as Record<string, unknown>[])
       .filter((z) => ZONE_ROLES.includes(z.role as typeof ZONE_ROLES[number]) && typeof z.x === "number")
-      .map((z) => ({
-        id: randomUUID(),
-        role: z.role as typeof ZONE_ROLES[number],
-        text: typeof z.text === "string" ? z.text : "",
-        x: Math.max(0, Math.min(1, z.x as number)),
-        y: Math.max(0, Math.min(1, z.y as number)),
-        w: Math.max(0.01, Math.min(1, z.w as number)),
-        h: Math.max(0.01, Math.min(1, z.h as number)),
-        color: typeof z.color === "string" ? z.color : "#ffffff",
-        fontSize: Math.max(6, Math.min(32, typeof z.fontSize === "number" ? z.fontSize : 10)),
-        textAlign: (["left", "center", "right"].includes(z.textAlign as string) ? z.textAlign : "left") as "left" | "center" | "right",
-      }));
+      .map((z) => {
+        const partial = {
+          id: randomUUID(),
+          role: z.role as typeof ZONE_ROLES[number],
+          text: typeof z.text === "string" ? z.text : "",
+          x: Math.max(0, Math.min(1, z.x as number)),
+          y: Math.max(0, Math.min(1, z.y as number)),
+          w: Math.max(0.01, Math.min(1, z.w as number)),
+          h: Math.max(0.01, Math.min(1, z.h as number)),
+          color: typeof z.color === "string" ? z.color : "#ffffff",
+          fontSize: Math.max(6, Math.min(32, typeof z.fontSize === "number" ? z.fontSize : 10)),
+          textAlign: (["left", "center", "right"].includes(z.textAlign as string) ? z.textAlign : "left") as "left" | "center" | "right",
+        };
+        return withMaxChars(partial);
+      });
 
     if (zones.length === 0) {
       zones = buildDefaultScaffold();

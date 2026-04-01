@@ -17,6 +17,7 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  AnalyzeLabelTemplateBody,
   CreateLabelSheetBody,
   CreateLabelTemplateBody,
   CreatePrintJobBody,
@@ -28,6 +29,7 @@ import type {
   HealthStatus,
   LabelSheet,
   LabelTemplate,
+  LabelZoneAnalysisResult,
   PrintJob,
   Product,
   ProductTypeCount,
@@ -958,6 +960,95 @@ export const useDeleteLabelTemplate = <
   TContext
 > => {
   return useMutation(getDeleteLabelTemplateMutationOptions(options));
+};
+
+/**
+ * @summary Analyze a label image or PDF and return detected zones
+ */
+export const getAnalyzeLabelTemplateUrl = () => {
+  return `/api/label-templates/analyze`;
+};
+
+export const analyzeLabelTemplate = async (
+  analyzeLabelTemplateBody: AnalyzeLabelTemplateBody,
+  options?: RequestInit,
+): Promise<LabelZoneAnalysisResult> => {
+  const formData = new FormData();
+  formData.append(`image`, analyzeLabelTemplateBody.image);
+
+  return customFetch<LabelZoneAnalysisResult>(getAnalyzeLabelTemplateUrl(), {
+    ...options,
+    method: "POST",
+    body: formData,
+  });
+};
+
+export const getAnalyzeLabelTemplateMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof analyzeLabelTemplate>>,
+    TError,
+    { data: BodyType<AnalyzeLabelTemplateBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof analyzeLabelTemplate>>,
+  TError,
+  { data: BodyType<AnalyzeLabelTemplateBody> },
+  TContext
+> => {
+  const mutationKey = ["analyzeLabelTemplate"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof analyzeLabelTemplate>>,
+    { data: BodyType<AnalyzeLabelTemplateBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return analyzeLabelTemplate(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AnalyzeLabelTemplateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof analyzeLabelTemplate>>
+>;
+export type AnalyzeLabelTemplateMutationBody =
+  BodyType<AnalyzeLabelTemplateBody>;
+export type AnalyzeLabelTemplateMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Analyze a label image or PDF and return detected zones
+ */
+export const useAnalyzeLabelTemplate = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof analyzeLabelTemplate>>,
+    TError,
+    { data: BodyType<AnalyzeLabelTemplateBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof analyzeLabelTemplate>>,
+  TError,
+  { data: BodyType<AnalyzeLabelTemplateBody> },
+  TContext
+> => {
+  return useMutation(getAnalyzeLabelTemplateMutationOptions(options));
 };
 
 /**
