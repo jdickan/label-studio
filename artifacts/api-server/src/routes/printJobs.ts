@@ -31,19 +31,25 @@ async function buildPrintJobResponse(job: typeof printJobsTable.$inferSelect) {
 
   const totalLabels = enrichedItems.reduce((sum, i) => sum + i.quantity, 0);
   const labelsPerSheet = sheet ? sheet.labelsAcross * sheet.labelsDown : 1;
-  const totalSheets = Math.ceil(totalLabels / labelsPerSheet);
+  const blankSlotsArr = (job.blankSlots as number[]) || [];
+  const validBlanks = blankSlotsArr.filter((s: number) => s >= 0 && s < labelsPerSheet).length;
+  const usablePerSheet = labelsPerSheet - validBlanks;
+  const totalSheets = usablePerSheet > 0 ? Math.ceil(totalLabels / usablePerSheet) : 0;
 
   return {
     id: job.id,
     name: job.name,
     labelSheetId: job.labelSheetId,
     labelSheetName: sheet?.name || "",
+    labelSheetBrand: sheet?.brand || "",
     labelSheetCode: sheet?.code || "",
     labelsPerSheet,
     items: enrichedItems,
     totalLabels,
     totalSheets,
     status: job.status,
+    jobType: (job.jobType as "standard" | "reprint") || "standard",
+    blankSlots: (job.blankSlots as number[]) || [],
     notes: job.notes,
     createdAt: job.createdAt,
     updatedAt: job.updatedAt,
@@ -68,6 +74,8 @@ router.post("/", async (req, res) => {
       name: body.name,
       labelSheetId: body.labelSheetId,
       items: body.items,
+      jobType: body.jobType ?? "standard",
+      blankSlots: body.blankSlots ?? [],
       notes: body.notes,
       status: "draft",
     }).returning();
@@ -100,6 +108,8 @@ router.patch("/:id", async (req, res) => {
     if (body.name !== undefined) updateData.name = body.name;
     if (body.labelSheetId !== undefined) updateData.labelSheetId = body.labelSheetId;
     if (body.items !== undefined) updateData.items = body.items;
+    if (body.jobType !== undefined) updateData.jobType = body.jobType;
+    if (body.blankSlots !== undefined) updateData.blankSlots = body.blankSlots;
     if (body.notes !== undefined) updateData.notes = body.notes;
     if (body.status !== undefined) updateData.status = body.status;
     const [job] = await db.update(printJobsTable)

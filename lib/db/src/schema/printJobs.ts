@@ -9,6 +9,8 @@ export const printJobsTable = pgTable("print_jobs", {
   labelSheetId: integer("label_sheet_id").notNull().references(() => labelSheetsTable.id),
   items: jsonb("items").notNull().default([]),
   status: text("status", { enum: ["draft", "ready", "printed"] }).notNull().default("draft"),
+  jobType: text("job_type", { enum: ["standard", "reprint"] }).notNull().default("standard"),
+  blankSlots: jsonb("blank_slots").notNull().default([]),
   notes: text("notes"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
