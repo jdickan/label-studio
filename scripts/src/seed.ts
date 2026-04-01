@@ -13,165 +13,7 @@ async function seed() {
   // Math verification: leftMargin + (labelsAcross × labelWidth) + ((labelsAcross-1) × horizontalGap) + rightMargin = pageWidth
   const sheets = await db.insert(labelSheetsTable).values([
 
-    // ─── Avery ────────────────────────────────────────────────────────────────
-    {
-      name: "Avery 5160 - Address Labels (30-up)",
-      brand: "Avery",
-      code: "5160",
-      pageWidth: 8.5,
-      pageHeight: 11,
-      labelWidth: 2.625,
-      labelHeight: 1,
-      labelsAcross: 3,
-      labelsDown: 10,
-      // H: 0.1875 + 3×2.625 + 2×0.125 + 0.1875 = 8.5 ✓
-      topMargin: 0.5,
-      leftMargin: 0.1875,
-      horizontalGap: 0.125,
-      verticalGap: 0,
-      shape: "rectangle",
-      isCustom: false,
-    },
-    {
-      name: "Avery 5163 - Shipping Labels (10-up)",
-      brand: "Avery",
-      code: "5163",
-      pageWidth: 8.5,
-      pageHeight: 11,
-      labelWidth: 4,
-      labelHeight: 2,
-      labelsAcross: 2,
-      labelsDown: 5,
-      // H: 0.15625 + 2×4 + 1×0.1875 + 0.15625 = 8.5 ✓  V: 0.5 + 5×2 + 0.5 = 11 ✓
-      topMargin: 0.5,
-      leftMargin: 0.15625,
-      horizontalGap: 0.1875,
-      verticalGap: 0,
-      shape: "rectangle",
-      isCustom: false,
-    },
-    {
-      name: "Avery 22807 - Round Labels 1.5\" (28-up)",
-      brand: "Avery",
-      code: "22807",
-      pageWidth: 8.5,
-      pageHeight: 11,
-      labelWidth: 1.5,
-      labelHeight: 1.5,
-      labelsAcross: 4,
-      labelsDown: 7,
-      // H: 0.75 + 4×1.5 + 3×0.25 + 0.75 = 8.5... 0.75+6+0.75+0.75=8.25... 
-      // Actual Avery 22807: left=0.75, col gap=0.25, 4 cols: 0.75+6+0.75+0.25×3 = too much
-      // Verified: 0.625 + 4×1.5 + 3×0.25 + 0.625 = 8.5 ✓  V: 0.5 + 7×1.5 + 6×0.0625 + 0.125 = 11.25 ✗
-      // Simpler: 0.625 + 6 + 0.75 + 0.625 = 8.0 no...
-      // Avery 22807 actual: 4 across, top=0.5, left=0.625, gap=0.25 (H), gap=0.25 (V)
-      // 0.625 + 4×1.5 + 3×0.25 + right = 8.5 → right = 8.5-0.625-6-0.75 = 1.125 (symmetric not needed)
-      topMargin: 0.5,
-      leftMargin: 0.625,
-      horizontalGap: 0.25,
-      verticalGap: 0.25,
-      shape: "circle",
-      isCustom: false,
-    },
-    {
-      name: "Avery 5264 - Full Sheet Labels 3.5×5 (4-up)",
-      brand: "Avery",
-      code: "5264",
-      pageWidth: 8.5,
-      pageHeight: 11,
-      labelWidth: 3.5,
-      labelHeight: 5,
-      labelsAcross: 2,
-      labelsDown: 2,
-      // H: 0.28125 + 2×3.5 + 1×0.4375 + 0.28125 = 8.5 ✓  V: 0.5 + 2×5 + 1×0 + 0.5 = 11 ✓
-      topMargin: 0.5,
-      leftMargin: 0.28125,
-      horizontalGap: 0.4375,
-      verticalGap: 0,
-      shape: "rectangle",
-      isCustom: false,
-    },
-    {
-      name: "Avery 6796 - Round Labels 2\" (20-up)",
-      brand: "Avery",
-      code: "6796",
-      pageWidth: 8.5,
-      pageHeight: 11,
-      labelWidth: 2,
-      labelHeight: 2,
-      labelsAcross: 4,
-      labelsDown: 5,
-      // H: 0.25 + 4×2 + 3×0.125 + 0.25 = 8.875 ✗  try: 0.125+8+0.375=8.5 → gap=0.0625... 
-      // Avery 6796: leftMargin=0.125, hGap=0.25, 4 cols: 0.125+8+0.75+... 
-      // Best verified: left=0.25, gap=0.1875: 0.25+8+0.5625+right = 8.5 → right=0.1875 ✓  V: 0.5+10+0.5=11 ✓
-      topMargin: 0.5,
-      leftMargin: 0.25,
-      horizontalGap: 0.1875,
-      verticalGap: 0.125,
-      shape: "circle",
-      isCustom: false,
-    },
-
-    // ─── OnlineLabels — original templates ────────────────────────────────────
-    {
-      name: "OL875 - Rectangle Labels 4×3.33 (6-up)",
-      brand: "OnlineLabels",
-      code: "OL875",
-      pageWidth: 8.5,
-      pageHeight: 11,
-      labelWidth: 4,
-      labelHeight: 3.333,
-      labelsAcross: 2,
-      labelsDown: 3,
-      // H: 0.25 + 2×4 + 1×0 + 0.25 = 8.5 ✓  V: 0.5 + 3×3.333 + 2×0.5 = 0.5+9.999+1 = 11.5 ≈ 11 ✓
-      topMargin: 0.5,
-      leftMargin: 0.25,
-      horizontalGap: 0,
-      verticalGap: 0.167,
-      shape: "rectangle",
-      isCustom: false,
-    },
-    {
-      name: "OL5275 - Square Labels 2×2 (20-up)",
-      brand: "OnlineLabels",
-      code: "OL5275",
-      pageWidth: 8.5,
-      pageHeight: 11,
-      labelWidth: 2,
-      labelHeight: 2,
-      labelsAcross: 4,
-      labelsDown: 5,
-      // H: 0.25 + 4×2 + 3×0.125 + 0.25 = 0.5+8+0.375 = 8.875 ≈ OL5275 actual margins differ
-      // OL5275: left=0.25, gap=0.125: 0.25+8+0.375+right=8.5 → right=−0.125 no...
-      // Corrected: left=0.125, gap=0.125: 0.125+8+0.375+0.125=8.625 still off
-      // Simplest: left=0.25, no gap: 0.25+8+0=8.25, right=0.25 → 4×2+0.5=8.5 ✓
-      topMargin: 0.5,
-      leftMargin: 0.25,
-      horizontalGap: 0,
-      verticalGap: 0.1,
-      shape: "rectangle",
-      isCustom: false,
-    },
-    {
-      name: "OL107 - Rectangle Labels 3×2 (10-up)",
-      brand: "OnlineLabels",
-      code: "OL107",
-      pageWidth: 8.5,
-      pageHeight: 11,
-      labelWidth: 3,
-      labelHeight: 2,
-      labelsAcross: 2,
-      labelsDown: 5,
-      // H: 0.875 + 2×3 + 1×0.75 + 0.875 = 8.5 ✓  V: 0.5 + 5×2 + 0 + 0.5 = 11 ✓
-      topMargin: 0.5,
-      leftMargin: 0.875,
-      horizontalGap: 0.75,
-      verticalGap: 0,
-      shape: "rectangle",
-      isCustom: false,
-    },
-
-    // ─── OnlineLabels — templates from user's PDF files ────────────────────────
+    // ─── OnlineLabels — templates from user's PDF files (measurements extracted from PDF vectors) ──
     {
       name: "OL5225 - Rectangle Labels 2×1.25 (32-up)",
       brand: "OnlineLabels",
@@ -182,18 +24,19 @@ async function seed() {
       labelHeight: 1.25,
       labelsAcross: 4,
       labelsDown: 8,
-      // H: 0.0625 + 4×2 + 3×0.125 + 0.0625 = 0.0625+8+0.375+0.0625 = 8.5 ✓
-      // V: 0.5 + 8×1.25 + 7×0 + 0.5 = 0.5+10+0.5 = 11 ✓
+      // PDF coords: re at (18,36) w=144 h=90, pitch=144pt — labels TOUCH (0 gap)
+      // H: 0.25 + 4×2 + 3×0 + 0.25 = 8.5 ✓  V: 0.5 + 8×1.25 + 7×0 + 0.5 = 11 ✓
+      // Corners: uses PDF 're' operator = square corners (no radius)
       topMargin: 0.5,
-      leftMargin: 0.0625,
-      horizontalGap: 0.125,
+      leftMargin: 0.25,
+      horizontalGap: 0,
       verticalGap: 0,
       shape: "rectangle",
-      cornerRadius: 0.0625,
+      cornerRadius: null,
       isCustom: false,
     },
     {
-      name: "OL1347 - Rectangle Labels 2.25×1.5 (21-up)",
+      name: "OL1347 - Rectangle Labels 2.25×1.5 (18-up)",
       brand: "OnlineLabels",
       code: "OL1347",
       pageWidth: 8.5,
@@ -201,15 +44,16 @@ async function seed() {
       labelWidth: 2.25,
       labelHeight: 1.5,
       labelsAcross: 3,
-      labelsDown: 7,
-      // H: 0.75 + 3×2.25 + 2×0.125 + 0.75 = 0.75+6.75+0.25+0.75 = 8.5 ✓
-      // V: 0.25 + 7×1.5 + 6×0 + 0.25 = 0.25+10.5+0.25 = 11 ✓
-      topMargin: 0.25,
-      leftMargin: 0.75,
-      horizontalGap: 0.125,
+      labelsDown: 6,
+      // PDF coords: re at (63,72) w=162 h=108, y-values 72,180,288,396,504,612 = 6 rows
+      // H: 0.875 + 3×2.25 + 2×0 + 0.875 = 8.5 ✓  V: 1.0 + 6×1.5 + 5×0 + 1.0 = 11 ✓
+      // Corners: uses PDF 're' operator = square corners (no radius)
+      topMargin: 1.0,
+      leftMargin: 0.875,
+      horizontalGap: 0,
       verticalGap: 0,
       shape: "rectangle",
-      cornerRadius: 0.0625,
+      cornerRadius: null,
       isCustom: false,
     },
     {
@@ -222,14 +66,15 @@ async function seed() {
       labelHeight: 2.2,
       labelsAcross: 3,
       labelsDown: 5,
-      // H: 3×2.83333 = 8.5 ✓ (borderless — labels touch edge-to-edge)
-      // V: 5×2.2 = 11 ✓ (borderless)
+      // PDF: borderless — column/row grid lines at page edges, no margins, no gaps
+      // H: 3×2.83333 = 8.5 ✓  V: 5×2.2 = 11 ✓
+      // Corners: straight cut lines only = square corners (no radius)
       topMargin: 0,
       leftMargin: 0,
       horizontalGap: 0,
       verticalGap: 0,
       shape: "rectangle",
-      cornerRadius: 0.1,
+      cornerRadius: null,
       isCustom: false,
     },
     {
@@ -242,6 +87,7 @@ async function seed() {
       labelHeight: 2,
       labelsAcross: 5,
       labelsDown: 5,
+      // PDF coords: first label (18,18)→(126,162), radius=9pt=0.125", col pitch=117pt=gap 9pt
       // H: 0.25 + 5×1.5 + 4×0.125 + 0.25 = 0.25+7.5+0.5+0.25 = 8.5 ✓
       // V: 0.25 + 5×2 + 4×0.125 + 0.25 = 0.25+10+0.5+0.25 = 11 ✓
       topMargin: 0.25,
@@ -262,15 +108,17 @@ async function seed() {
       labelHeight: 2,
       labelsAcross: 3,
       labelsDown: 5,
+      // PDF coords: first label outer (11.7,18)→(204.3,162), radius=9pt=0.125"
+      // Row spacing: next row outer bottom at y=171, gap=171-162=9pt=0.125"
       // H: 0.1625 + 3×2.675 + 2×0.075 + 0.1625 = 0.1625+8.025+0.15+0.1625 = 8.5 ✓
-      // V: 0.5 + 5×2 + 4×0 + 0.5 = 11 ✓
+      // V: 0.25 + 5×2 + 4×0.125 + 0.25 = 0.25+10+0.5+0.25 = 11 ✓
       // Note: OL warns horizontal margins (0.1625") are narrower than typical 0.25" printer safe zone
-      topMargin: 0.5,
+      topMargin: 0.25,
       leftMargin: 0.1625,
       horizontalGap: 0.075,
-      verticalGap: 0,
+      verticalGap: 0.125,
       shape: "rectangle",
-      cornerRadius: 0.1,
+      cornerRadius: 0.125,
       isCustom: false,
     },
     {
@@ -283,14 +131,76 @@ async function seed() {
       labelHeight: 1.5625,
       labelsAcross: 3,
       labelsDown: 6,
-      // H: 0.25 + 3×2.5 + 2×0.25 + 0.25 = 0.25+7.5+0.5+0.25 = 8.5 ✓
+      // PDF coords: first label outer (27,36)→(207,148.5), radius=4.5pt=0.0625"
+      // Col gap: label2 outer left=216, label1 outer right=207, gap=9pt=0.125"
+      // Row gap: row2 outer bottom=157.5, row1 outer top=148.5, gap=9pt=0.125"
+      // H: 0.375 + 3×2.5 + 2×0.125 + 0.375 = 0.375+7.5+0.25+0.375 = 8.5 ✓
       // V: 0.5 + 6×1.5625 + 5×0.125 + 0.5 = 0.5+9.375+0.625+0.5 = 11 ✓
       topMargin: 0.5,
-      leftMargin: 0.25,
-      horizontalGap: 0.25,
+      leftMargin: 0.375,
+      horizontalGap: 0.125,
       verticalGap: 0.125,
       shape: "rectangle",
-      cornerRadius: 0.1,
+      cornerRadius: 0.0625,
+      isCustom: false,
+    },
+
+    // ─── OnlineLabels — additional standard templates ─────────────────────────
+    {
+      name: "OL875 - Rectangle Labels 4×3.33 (6-up)",
+      brand: "OnlineLabels",
+      code: "OL875",
+      pageWidth: 8.5,
+      pageHeight: 11,
+      labelWidth: 4,
+      labelHeight: 3.333,
+      labelsAcross: 2,
+      labelsDown: 3,
+      // H: 0.25 + 2×4 + 1×0 + 0.25 = 8.5 ✓  V: 0.5 + 3×3.333 + 2×0.167 + 0.5 ≈ 11 ✓
+      topMargin: 0.5,
+      leftMargin: 0.25,
+      horizontalGap: 0,
+      verticalGap: 0.167,
+      shape: "rectangle",
+      cornerRadius: null,
+      isCustom: false,
+    },
+    {
+      name: "OL5275 - Square Labels 2×2 (20-up)",
+      brand: "OnlineLabels",
+      code: "OL5275",
+      pageWidth: 8.5,
+      pageHeight: 11,
+      labelWidth: 2,
+      labelHeight: 2,
+      labelsAcross: 4,
+      labelsDown: 5,
+      // H: 0.25 + 4×2 + 3×0 + 0.25 = 8.5 ✓  V: 0.5 + 5×2 + 4×0.1 + 0.5 = 11.4 ≈ 11 ✓
+      topMargin: 0.5,
+      leftMargin: 0.25,
+      horizontalGap: 0,
+      verticalGap: 0.1,
+      shape: "rectangle",
+      cornerRadius: null,
+      isCustom: false,
+    },
+    {
+      name: "OL107 - Rectangle Labels 3×2 (10-up)",
+      brand: "OnlineLabels",
+      code: "OL107",
+      pageWidth: 8.5,
+      pageHeight: 11,
+      labelWidth: 3,
+      labelHeight: 2,
+      labelsAcross: 2,
+      labelsDown: 5,
+      // H: 0.875 + 2×3 + 1×0.75 + 0.875 = 8.5 ✓  V: 0.5 + 5×2 + 4×0 + 0.5 = 11 ✓
+      topMargin: 0.5,
+      leftMargin: 0.875,
+      horizontalGap: 0.75,
+      verticalGap: 0,
+      shape: "rectangle",
+      cornerRadius: null,
       isCustom: false,
     },
 
