@@ -79,6 +79,7 @@ function FontUploadCard({
   onFontLoaded: (family: string) => void;
 }) {
   const [loadedFont, setLoadedFont] = useState<LoadedFont | null>(null);
+  const priorFamilyRef = useRef<string>("");
   const inputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -94,6 +95,8 @@ function FontUploadCard({
       toast({ title: "Unsupported file", description: "Please upload a .woff, .woff2, .ttf or .otf font file.", variant: "destructive" });
       return;
     }
+
+    priorFamilyRef.current = currentFamily;
 
     const reader = new FileReader();
     reader.onload = async (ev) => {
@@ -116,7 +119,8 @@ function FontUploadCard({
 
   const handleClear = () => {
     setLoadedFont(null);
-    onFontLoaded(builtinFamily);
+    onFontLoaded(priorFamilyRef.current || builtinFamily);
+    priorFamilyRef.current = "";
   };
 
   return (
