@@ -5,11 +5,14 @@
  * Label Studio API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { CreatePrintJobBodyJobType } from "./createPrintJobBodyJobType";
 import type { CreatePrintJobItemBody } from "./createPrintJobItemBody";
 
 export interface CreatePrintJobBody {
   name: string;
   labelSheetId: number;
+  jobType?: CreatePrintJobBodyJobType;
+  blankSlots?: number[];
   items: CreatePrintJobItemBody[];
   notes?: string;
 }

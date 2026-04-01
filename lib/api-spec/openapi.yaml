@@ -1040,8 +1040,17 @@ components:
           type: string
         labelSheetCode:
           type: string
+        labelSheetBrand:
+          type: string
         labelsPerSheet:
           type: integer
+        jobType:
+          type: string
+          enum: [standard, reprint]
+        blankSlots:
+          type: array
+          items:
+            type: integer
         items:
           type: array
           items:
@@ -1068,7 +1077,10 @@ components:
         - labelSheetId
         - labelSheetName
         - labelSheetCode
+        - labelSheetBrand
         - labelsPerSheet
+        - jobType
+        - blankSlots
         - items
         - totalLabels
         - totalSheets
@@ -1083,6 +1095,13 @@ components:
           type: string
         labelSheetId:
           type: integer
+        jobType:
+          type: string
+          enum: [standard, reprint]
+        blankSlots:
+          type: array
+          items:
+            type: integer
         items:
           type: array
           items:
@@ -1101,6 +1120,13 @@ components:
           type: string
         labelSheetId:
           type: integer
+        jobType:
+          type: string
+          enum: [standard, reprint]
+        blankSlots:
+          type: array
+          items:
+            type: integer
         items:
           type: array
           items:

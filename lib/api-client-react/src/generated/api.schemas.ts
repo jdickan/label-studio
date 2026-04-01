@@ -289,6 +289,14 @@ export interface CreatePrintJobItemBody {
   quantity: number;
 }
 
+export type PrintJobJobType =
+  (typeof PrintJobJobType)[keyof typeof PrintJobJobType];
+
+export const PrintJobJobType = {
+  standard: "standard",
+  reprint: "reprint",
+} as const;
+
 export type PrintJobStatus =
   (typeof PrintJobStatus)[keyof typeof PrintJobStatus];
 
@@ -304,7 +312,10 @@ export interface PrintJob {
   labelSheetId: number;
   labelSheetName: string;
   labelSheetCode: string;
+  labelSheetBrand: string;
   labelsPerSheet: number;
+  jobType: PrintJobJobType;
+  blankSlots: number[];
   items: PrintJobItem[];
   totalLabels: number;
   totalSheets: number;
@@ -314,12 +325,30 @@ export interface PrintJob {
   updatedAt: string;
 }
 
+export type CreatePrintJobBodyJobType =
+  (typeof CreatePrintJobBodyJobType)[keyof typeof CreatePrintJobBodyJobType];
+
+export const CreatePrintJobBodyJobType = {
+  standard: "standard",
+  reprint: "reprint",
+} as const;
+
 export interface CreatePrintJobBody {
   name: string;
   labelSheetId: number;
+  jobType?: CreatePrintJobBodyJobType;
+  blankSlots?: number[];
   items: CreatePrintJobItemBody[];
   notes?: string;
 }
+
+export type UpdatePrintJobBodyJobType =
+  (typeof UpdatePrintJobBodyJobType)[keyof typeof UpdatePrintJobBodyJobType];
+
+export const UpdatePrintJobBodyJobType = {
+  standard: "standard",
+  reprint: "reprint",
+} as const;
 
 export type UpdatePrintJobBodyStatus =
   (typeof UpdatePrintJobBodyStatus)[keyof typeof UpdatePrintJobBodyStatus];
@@ -333,6 +362,8 @@ export const UpdatePrintJobBodyStatus = {
 export interface UpdatePrintJobBody {
   name?: string;
   labelSheetId?: number;
+  jobType?: UpdatePrintJobBodyJobType;
+  blankSlots?: number[];
   items?: CreatePrintJobItemBody[];
   notes?: string;
   status?: UpdatePrintJobBodyStatus;

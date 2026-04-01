@@ -517,7 +517,10 @@ export const GetPrintJobsResponseItem = zod.object({
   labelSheetId: zod.number(),
   labelSheetName: zod.string(),
   labelSheetCode: zod.string(),
+  labelSheetBrand: zod.string(),
   labelsPerSheet: zod.number(),
+  jobType: zod.enum(["standard", "reprint"]),
+  blankSlots: zod.array(zod.number()),
   items: zod.array(
     zod.object({
       productId: zod.number(),
@@ -543,6 +546,8 @@ export const GetPrintJobsResponse = zod.array(GetPrintJobsResponseItem);
 export const CreatePrintJobBody = zod.object({
   name: zod.string(),
   labelSheetId: zod.number(),
+  jobType: zod.enum(["standard", "reprint"]).optional(),
+  blankSlots: zod.array(zod.number()).optional(),
   items: zod.array(
     zod.object({
       productId: zod.number(),
@@ -565,7 +570,10 @@ export const GetPrintJobResponse = zod.object({
   labelSheetId: zod.number(),
   labelSheetName: zod.string(),
   labelSheetCode: zod.string(),
+  labelSheetBrand: zod.string(),
   labelsPerSheet: zod.number(),
+  jobType: zod.enum(["standard", "reprint"]),
+  blankSlots: zod.array(zod.number()),
   items: zod.array(
     zod.object({
       productId: zod.number(),
@@ -594,6 +602,8 @@ export const UpdatePrintJobParams = zod.object({
 export const UpdatePrintJobBody = zod.object({
   name: zod.string().optional(),
   labelSheetId: zod.number().optional(),
+  jobType: zod.enum(["standard", "reprint"]).optional(),
+  blankSlots: zod.array(zod.number()).optional(),
   items: zod
     .array(
       zod.object({
@@ -612,7 +622,10 @@ export const UpdatePrintJobResponse = zod.object({
   labelSheetId: zod.number(),
   labelSheetName: zod.string(),
   labelSheetCode: zod.string(),
+  labelSheetBrand: zod.string(),
   labelsPerSheet: zod.number(),
+  jobType: zod.enum(["standard", "reprint"]),
+  blankSlots: zod.array(zod.number()),
   items: zod.array(
     zod.object({
       productId: zod.number(),
@@ -660,7 +673,10 @@ export const GetRecentPrintJobsResponseItem = zod.object({
   labelSheetId: zod.number(),
   labelSheetName: zod.string(),
   labelSheetCode: zod.string(),
+  labelSheetBrand: zod.string(),
   labelsPerSheet: zod.number(),
+  jobType: zod.enum(["standard", "reprint"]),
+  blankSlots: zod.array(zod.number()),
   items: zod.array(
     zod.object({
       productId: zod.number(),

@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { PrintJobItem } from "./printJobItem";
+import type { PrintJobJobType } from "./printJobJobType";
 import type { PrintJobStatus } from "./printJobStatus";
 
 export interface PrintJob {
@@ -14,7 +15,10 @@ export interface PrintJob {
   labelSheetId: number;
   labelSheetName: string;
   labelSheetCode: string;
+  labelSheetBrand: string;
   labelsPerSheet: number;
+  jobType: PrintJobJobType;
+  blankSlots: number[];
   items: PrintJobItem[];
   totalLabels: number;
   totalSheets: number;

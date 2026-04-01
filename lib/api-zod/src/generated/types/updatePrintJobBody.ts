@@ -6,11 +6,14 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { CreatePrintJobItemBody } from "./createPrintJobItemBody";
+import type { UpdatePrintJobBodyJobType } from "./updatePrintJobBodyJobType";
 import type { UpdatePrintJobBodyStatus } from "./updatePrintJobBodyStatus";
 
 export interface UpdatePrintJobBody {
   name?: string;
   labelSheetId?: number;
+  jobType?: UpdatePrintJobBodyJobType;
+  blankSlots?: number[];
   items?: CreatePrintJobItemBody[];
   notes?: string;
   status?: UpdatePrintJobBodyStatus;

@@ -173,15 +173,15 @@ function DropzoneArea({ onFile }: { onFile: (f: File) => void }) {
       <ImagePlus className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
       <p className="text-lg font-medium mb-1">Upload a label design</p>
       <p className="text-sm text-muted-foreground mb-4">
-        Drop a JPG or PNG of your existing label — we'll detect zones automatically
+        Drop a JPG, PNG, or PDF of your existing label — we'll detect zones automatically
       </p>
       <Button type="button" variant="outline" size="sm" onClick={e => { e.stopPropagation(); inputRef.current?.click(); }}>
-        <Upload className="w-4 h-4 mr-2" /> Choose image
+        <Upload className="w-4 h-4 mr-2" /> Choose file
       </Button>
       <input
         ref={inputRef}
         type="file"
-        accept="image/jpeg,image/png,image/webp"
+        accept="image/jpeg,image/png,image/webp,application/pdf"
         className="hidden"
         onChange={e => { const f = e.target.files?.[0]; if (f) onFile(f); e.target.value = ""; }}
       />
@@ -686,7 +686,7 @@ export default function LabelTemplates() {
       name: templateName,
       description: templateDescription || undefined,
       labelSheetId: labelSheetId === "none" ? undefined : parseInt(labelSheetId),
-      zones: zones as any,
+      zones: zones as unknown,
       safeAreaEnabled,
     };
     if (activeTemplateId) {
