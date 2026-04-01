@@ -40,7 +40,7 @@ artifacts-monorepo/
 ## Database Schema
 
 Tables:
-- `label_sheets` — Avery/OnlineLabels sheet templates with physical dimensions
+- `label_sheets` — OnlineLabels sheet templates with physical dimensions (OL-only, no Avery)
 - `label_templates` — Label layout zone templates (where logo, scent notes, etc. go)
 - `design_system` — Brand settings (colors, fonts, logo URL, business info)
 - `products` — Product catalog (soy candles, room sprays, room diffusers)
@@ -51,6 +51,9 @@ Tables:
 All routes prefixed with `/api`:
 - `GET/POST /label-sheets` — Label sheet CRUD
 - `GET/PATCH/DELETE /label-sheets/:id`
+- `POST /label-sheets/upload-pdf` — Upload PDF templates (multer, returns jobId)
+- `GET /label-sheets/analyze/:jobId/events` — SSE stream of 12-step analysis progress
+- `POST /label-sheets/import` — Bulk-import extracted measurements to DB
 - `GET/POST /label-templates` — Label template CRUD
 - `GET/PATCH/DELETE /label-templates/:id`
 - `GET/PATCH /design-system` — Brand design system (singleton)
@@ -66,17 +69,26 @@ All routes prefixed with `/api`:
 
 - `/dashboard` — Overview stats, recent print jobs, products by type
 - `/products` — Product table with search/filter, CRUD, inline editing
-- `/label-sheets` — Sheet template browser (Avery, OnlineLabels, custom)
+- `/label-sheets` — Sheet template browser (OnlineLabels + custom); "Upload Template PDF" button triggers SSE-streaming 12-step analysis modal
 - `/label-templates` — Layout zone editor with visual preview
 - `/print-jobs` — Create/manage print batches, visual sheet preview, PDF/print
 - `/brand-settings` — Design system editor (colors, fonts, logo, contact info)
 
 ## Seeded Data
 
-- 8 Avery/OnlineLabels sheet templates (5160, 5163, 22807, 5264, 6796, OL875, OL5275, OL107)
+- 10 OnlineLabels sheet templates: OL5225, OL1347, OL750, OL7850, OL775, OL800, OL875, OL5275, OL107, plus CandleBliss custom. All 6 PDF-verified OL templates have measurements extracted from PDF vector paths (not web-scraped). No Avery templates.
 - 5 sample products (3 soy candles, 1 room spray, 1 room diffuser)
 - 1 sample print job
 - Design system with "Bloom & Ember" branding defaults
+
+## PDF Template Analysis
+
+- All OL measurements extracted from actual PDF vector drawing commands using Node.js `zlib.inflateSync`
+- Two PDF modes handled: `re` operator (square corners) and Bezier paths (rounded corners)
+- Y-flip coordinate transform (`1 0 0 -1 0 792 cm`) detected and handled automatically
+- 12-step checklist streamed via SSE per file; measurements auto-computed and H/V math validated
+- Reference doc: `docs/LABEL_SHEET_MEASUREMENT_PROTOCOL.md`
+- Skill: `.local/skills/label-sheet-pdf/SKILL.md`
 
 ## TypeScript & Composite Projects
 

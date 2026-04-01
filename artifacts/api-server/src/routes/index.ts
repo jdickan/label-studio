@@ -6,11 +6,13 @@ import designSystemRouter from "./designSystem";
 import productsRouter from "./products";
 import printJobsRouter from "./printJobs";
 import dashboardRouter from "./dashboard";
+import pdfAnalysisRouter from "./pdfAnalysis";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
 router.use("/label-sheets", labelSheetsRouter);
+router.use("/label-sheets", pdfAnalysisRouter);
 router.use("/label-templates", labelTemplatesRouter);
 router.use("/design-system", designSystemRouter);
 router.use("/products", productsRouter);
