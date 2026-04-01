@@ -24,7 +24,7 @@ The project is a pnpm workspace with four categories of packages:
 | `lib/db` | `@workspace/db` | Drizzle ORM schema, migrations, DB connection |
 | `scripts` | `@workspace/scripts` | Database seed script |
 
-All packages extend `tsconfig.base.json` with `composite: true`. TypeScript project references enforce clean build boundaries.
+All packages extend `tsconfig.base.json`. Library packages (`lib/*`) set `composite: true` and emit declaration files, enabling TypeScript project references from app packages. App/script packages (`artifacts/*`, `scripts`) use references to consume the libraries but do not set `composite` themselves. The base config enables strict-leaning settings individually (`noImplicitAny`, `strictNullChecks`, `strictBindCallApply`, `strictPropertyInitialization`, `noImplicitReturns`) rather than using the `strict` umbrella flag.
 
 ---
 
