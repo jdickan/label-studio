@@ -81,9 +81,9 @@ const DEFAULT_ASPECT = 4.75 / 1.25;
 
 // ─── Safe-area guide constants ─────────────────────────────────────────────────
 // Fractional inset from each edge (proportion of label dimension).
-const IMAGE_SAFE_INSET = 0.03;   // 3% — bleed/cut boundary
-const TEXT_SAFE_INSET  = 0.06;   // 6% — typography safety margin
-const SNAP_THRESHOLD   = 0.025;  // within 2.5% → snap to guide
+const DEFAULT_IMAGE_SAFE_INSET = 0.03;   // fallback 3% when no sheet linked
+const DEFAULT_TEXT_SAFE_INSET  = 0.06;   // fallback 6%
+const SNAP_THRESHOLD           = 0.025;  // within 2.5% → snap to guide
 
 /** Snap a zone edge pair to the nearest guide candidate. */
 function snapEdge(pos: number, size: number, guides: number[], thresh: number): number {
@@ -282,9 +282,18 @@ type ZoneCanvasProps = {
   showTextSafe?: boolean;
   showImageSafe?: boolean;
   labelBgColor?: string | null;
+  /** Per-axis safe-area insets (fraction of label dimension). Falls back to defaults when absent. */
+  imageInsetX?: number;
+  imageInsetY?: number;
+  textInsetX?: number;
+  textInsetY?: number;
 };
 
-function ZoneCanvas({ zones, selectedId, onSelect, onChange, onBeforeDrag, imageUrl, canvasW, canvasH, readOnly, label, headingFont, bodyFont, showTextSafe, showImageSafe, labelBgColor }: ZoneCanvasProps) {
+function ZoneCanvas({ zones, selectedId, onSelect, onChange, onBeforeDrag, imageUrl, canvasW, canvasH, readOnly, label, headingFont, bodyFont, showTextSafe, showImageSafe, labelBgColor, imageInsetX, imageInsetY, textInsetX, textInsetY }: ZoneCanvasProps) {
+  const imgInX = imageInsetX ?? DEFAULT_IMAGE_SAFE_INSET;
+  const imgInY = imageInsetY ?? DEFAULT_IMAGE_SAFE_INSET;
+  const txtInX = textInsetX  ?? DEFAULT_TEXT_SAFE_INSET;
+  const txtInY = textInsetY  ?? DEFAULT_TEXT_SAFE_INSET;
   const containerRef = useRef<HTMLDivElement>(null);
   const [editingZoneId, setEditingZoneId] = useState<string | null>(null);
   const dragState = useRef<{
@@ -312,12 +321,12 @@ function ZoneCanvas({ zones, selectedId, onSelect, onChange, onBeforeDrag, image
     const dy = (e.clientY - ds.startClientY) / ds.canvasRect.height;
 
     const snapXs = [0, 1,
-      ...(showImageSafe ? [IMAGE_SAFE_INSET, 1 - IMAGE_SAFE_INSET] : []),
-      ...(showTextSafe  ? [TEXT_SAFE_INSET,  1 - TEXT_SAFE_INSET]  : []),
+      ...(showImageSafe ? [imgInX, 1 - imgInX] : []),
+      ...(showTextSafe  ? [txtInX, 1 - txtInX] : []),
     ];
     const snapYs = [0, 1,
-      ...(showImageSafe ? [IMAGE_SAFE_INSET, 1 - IMAGE_SAFE_INSET] : []),
-      ...(showTextSafe  ? [TEXT_SAFE_INSET,  1 - TEXT_SAFE_INSET]  : []),
+      ...(showImageSafe ? [imgInY, 1 - imgInY] : []),
+      ...(showTextSafe  ? [txtInY, 1 - txtInY] : []),
     ];
 
     onChange(zones.map(z => {
@@ -338,7 +347,7 @@ function ZoneCanvas({ zones, selectedId, onSelect, onChange, onBeforeDrag, image
       }
       return withMaxChars(updated);
     }));
-  }, [zones, onChange, showImageSafe, showTextSafe]);
+  }, [zones, onChange, showImageSafe, showTextSafe, imgInX, imgInY, txtInX, txtInY]);
 
   const handlePointerUp = useCallback(() => { dragState.current = null; }, []);
 
@@ -547,10 +556,10 @@ function ZoneCanvas({ zones, selectedId, onSelect, onChange, onBeforeDrag, image
           <div
             className="absolute pointer-events-none"
             style={{
-              left:   `${IMAGE_SAFE_INSET * 100}%`,
-              top:    `${IMAGE_SAFE_INSET * 100}%`,
-              right:  `${IMAGE_SAFE_INSET * 100}%`,
-              bottom: `${IMAGE_SAFE_INSET * 100}%`,
+              left:   `${imgInX * 100}%`,
+              top:    `${imgInY * 100}%`,
+              right:  `${imgInX * 100}%`,
+              bottom: `${imgInY * 100}%`,
               border: "1.5px dashed #f97316",
               zIndex: 60,
             }}
@@ -567,10 +576,10 @@ function ZoneCanvas({ zones, selectedId, onSelect, onChange, onBeforeDrag, image
           <div
             className="absolute pointer-events-none"
             style={{
-              left:   `${TEXT_SAFE_INSET * 100}%`,
-              top:    `${TEXT_SAFE_INSET * 100}%`,
-              right:  `${TEXT_SAFE_INSET * 100}%`,
-              bottom: `${TEXT_SAFE_INSET * 100}%`,
+              left:   `${txtInX * 100}%`,
+              top:    `${txtInY * 100}%`,
+              right:  `${txtInX * 100}%`,
+              bottom: `${txtInY * 100}%`,
               border: "1.5px dashed #3b82f6",
               zIndex: 61,
             }}
@@ -963,6 +972,17 @@ export default function LabelTemplates() {
   const isEditing = mode === "editing" || mode === "creating";
   const isSaving  = createMutation.isPending || updateMutation.isPending;
 
+  // Compute per-axis safe-area insets from the linked sheet's actual measurements.
+  // Falls back to DEFAULT constants when no sheet is linked or bleed/safeArea = 0.
+  const imageInsetX = assignedSheet && assignedSheet.bleedInches > 0
+    ? assignedSheet.bleedInches / assignedSheet.labelWidth  : DEFAULT_IMAGE_SAFE_INSET;
+  const imageInsetY = assignedSheet && assignedSheet.bleedInches > 0
+    ? assignedSheet.bleedInches / assignedSheet.labelHeight : DEFAULT_IMAGE_SAFE_INSET;
+  const textInsetX = assignedSheet && assignedSheet.safeAreaInches > 0
+    ? assignedSheet.safeAreaInches / assignedSheet.labelWidth  : DEFAULT_TEXT_SAFE_INSET;
+  const textInsetY = assignedSheet && assignedSheet.safeAreaInches > 0
+    ? assignedSheet.safeAreaInches / assignedSheet.labelHeight : DEFAULT_TEXT_SAFE_INSET;
+
   useEffect(() => {
     if (showAdvancedJson) setJsonText(JSON.stringify(zones, null, 2));
   }, [showAdvancedJson, zones]);
@@ -1305,6 +1325,10 @@ export default function LabelTemplates() {
                         showImageSafe={showImageSafe}
                         showTextSafe={showTextSafe}
                         labelBgColor={labelBgColor}
+                        imageInsetX={imageInsetX}
+                        imageInsetY={imageInsetY}
+                        textInsetX={textInsetX}
+                        textInsetY={textInsetY}
                       />
                       {isSideBySide && previewSheet && (
                         <ZoneCanvas
@@ -1320,6 +1344,10 @@ export default function LabelTemplates() {
                           showImageSafe={showImageSafe}
                           showTextSafe={showTextSafe}
                           labelBgColor={labelBgColor}
+                          imageInsetX={imageInsetX}
+                          imageInsetY={imageInsetY}
+                          textInsetX={textInsetX}
+                          textInsetY={textInsetY}
                         />
                       )}
                     </div>
@@ -1398,7 +1426,11 @@ export default function LabelTemplates() {
                           <div className="flex items-center gap-1.5">
                             <span className="inline-block w-3 h-3 rounded-sm border-2 border-dashed border-orange-500" />
                             <span className="text-sm">Image safe</span>
-                            <span className="text-xs text-muted-foreground">(3% inset)</span>
+                            <span className="text-xs text-muted-foreground">
+                              {assignedSheet && assignedSheet.bleedInches > 0
+                                ? `${assignedSheet.bleedInches}" bleed`
+                                : `${(DEFAULT_IMAGE_SAFE_INSET * 100).toFixed(0)}% inset`}
+                            </span>
                           </div>
                           <Switch checked={showImageSafe} onCheckedChange={setShowImageSafe} />
                         </div>
@@ -1406,7 +1438,11 @@ export default function LabelTemplates() {
                           <div className="flex items-center gap-1.5">
                             <span className="inline-block w-3 h-3 rounded-sm border-2 border-dashed border-blue-500" />
                             <span className="text-sm">Text safe</span>
-                            <span className="text-xs text-muted-foreground">(6% inset)</span>
+                            <span className="text-xs text-muted-foreground">
+                              {assignedSheet && assignedSheet.safeAreaInches > 0
+                                ? `${assignedSheet.safeAreaInches}" margin`
+                                : `${(DEFAULT_TEXT_SAFE_INSET * 100).toFixed(0)}% inset`}
+                            </span>
                           </div>
                           <Switch checked={showTextSafe} onCheckedChange={setShowTextSafe} />
                         </div>
