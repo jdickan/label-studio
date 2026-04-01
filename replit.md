@@ -21,6 +21,15 @@ pnpm workspace monorepo using TypeScript. Label Studio — a label management ap
 - **File uploads**: multer (memory storage)
 - **Streaming**: Server-Sent Events (SSE) for PDF analysis progress
 
+## Documentation
+
+- [`README.md`](./README.md) — Project overview, stack, setup, feature index
+- [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) — Monorepo layout, DB schema, API routes, SSE flow, design decisions
+- [`docs/LABEL_WORKFLOW.md`](./docs/LABEL_WORKFLOW.md) — End-to-end production pipeline (brand → sheets → templates → print → PDF)
+- [`docs/LABEL_SHEET_MEASUREMENT_PROTOCOL.md`](./docs/LABEL_SHEET_MEASUREMENT_PROTOCOL.md) — PDF extraction methodology
+
+---
+
 ## Structure
 
 ```text

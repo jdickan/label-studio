@@ -1,5 +1,14 @@
 # Architecture
 
+## Notes on Original Task Scope
+
+Two items mentioned in the original planning spec diverge from the current implementation and are documented here explicitly rather than in the original planned location:
+
+- **pdf-lib**: The original task mentioned pdf-lib as the PDF generation library. In practice, the template border PDF is generated via a custom low-level PDF object emitter (< 200 lines in `labelSheets.ts`) with no external library. This was the implementation choice made during initial development.
+- **brand_fonts table**: The original task referenced a `brand_fonts` database table. No such table exists in the current schema. Font management is session-local via the browser `FontFace` API (see the "Font Storage" section below).
+
+---
+
 ## Monorepo Overview
 
 The project is a pnpm workspace with four categories of packages:
