@@ -800,7 +800,8 @@ export default function LabelSheets() {
     leftMargin: 0.25,
     horizontalGap: 0,
     verticalGap: 0,
-    shape: "rectangle" as "rectangle" | "circle" | "oval"
+    shape: "rectangle" as "rectangle" | "circle" | "oval",
+    cornerRadius: null as number | null,
   });
 
   const handleEdit = (sheet: LabelSheet) => {
@@ -818,7 +819,8 @@ export default function LabelSheets() {
       leftMargin: sheet.leftMargin,
       horizontalGap: sheet.horizontalGap,
       verticalGap: sheet.verticalGap,
-      shape: sheet.shape
+      shape: sheet.shape,
+      cornerRadius: sheet.cornerRadius ?? null,
     });
     setEditingId(sheet.id);
     setIsDialogOpen(true);
@@ -839,7 +841,8 @@ export default function LabelSheets() {
       leftMargin: 0.25,
       horizontalGap: 0,
       verticalGap: 0,
-      shape: "rectangle"
+      shape: "rectangle",
+      cornerRadius: null as number | null,
     });
     setEditingId(null);
     setIsDialogOpen(true);
@@ -847,6 +850,7 @@ export default function LabelSheets() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const cr = formData.cornerRadius;
     const payload = {
       ...formData,
       pageWidth:     Number(formData.pageWidth),
@@ -859,6 +863,7 @@ export default function LabelSheets() {
       leftMargin:    Number(formData.leftMargin),
       horizontalGap: Number(formData.horizontalGap),
       verticalGap:   Number(formData.verticalGap),
+      cornerRadius:  (cr !== null && String(cr) !== "" && Number(cr) > 0) ? Number(cr) : null,
     };
 
     if (editingId) {
@@ -1057,16 +1062,50 @@ export default function LabelSheets() {
 
               <div className="space-y-2">
                 <Label>Shape</Label>
-                <Select value={formData.shape} onValueChange={(v: any) => setFormData({...formData, shape: v})}>
+                <Select
+                  value={formData.shape}
+                  onValueChange={(v: any) => setFormData({
+                    ...formData,
+                    shape: v,
+                    cornerRadius: v !== "rectangle" ? null : formData.cornerRadius,
+                  })}
+                >
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="rectangle">Rectangle</SelectItem>
                     <SelectItem value="circle">Circle</SelectItem>
-                    <SelectItem value="oval">Oval</SelectItem>
+                    <SelectItem value="oval">Oval (ellipse die-cut)</SelectItem>
                   </SelectContent>
                 </Select>
+                <p className="text-xs text-muted-foreground">
+                  Oval = ellipse-shaped die-cut (not rounded corners — use Corner Radius below for that)
+                </p>
               </div>
-              <div className="space-y-2" />
+              <div className="space-y-2">
+                <Label>
+                  Corner Radius (in)
+                  {formData.shape !== "rectangle" && (
+                    <span className="ml-1.5 text-muted-foreground font-normal text-xs">— n/a for {formData.shape}</span>
+                  )}
+                </Label>
+                <Input
+                  type="number"
+                  step="0.001"
+                  min="0"
+                  placeholder="0 = square corners"
+                  disabled={formData.shape !== "rectangle"}
+                  value={formData.cornerRadius ?? ""}
+                  onChange={e => setFormData({
+                    ...formData,
+                    cornerRadius: e.target.value === "" ? null : Number(e.target.value),
+                  })}
+                />
+                {formData.cornerRadius && Number(formData.cornerRadius) > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    = {(Number(formData.cornerRadius) * 25.4).toFixed(2)} mm
+                  </p>
+                )}
+              </div>
 
               <div className="space-y-2">
                 <Label>Label Width (in)</Label>
