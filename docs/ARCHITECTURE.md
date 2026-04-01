@@ -33,7 +33,11 @@ All packages extend `tsconfig.base.json`. Three TypeScript library packages set 
 
 `lib/api-spec` is a plain JavaScript/TypeScript tooling package (Orval config + OpenAPI YAML); it has no `tsconfig.json` and is not a TypeScript composite project.
 
-App packages (`artifacts/api-server`, `artifacts/label-studio`, `artifacts/mockup-sandbox`) use TypeScript project `references` to consume the composite library packages. The `scripts` package has a `tsconfig.json` but does not use project references (it imports `@workspace/db` at runtime via pnpm workspace linking). Neither app nor script packages set `composite`.
+Two app packages use TypeScript project `references` to consume composite library packages:
+- `artifacts/api-server` → references `lib/db`, `lib/api-zod`
+- `artifacts/label-studio` → references `lib/api-client-react`
+
+`artifacts/mockup-sandbox` and `scripts` have `tsconfig.json` files but do **not** use project references — they rely on pnpm workspace linking at runtime. Neither app nor script packages set `composite`.
 
 The base config enables strict-leaning settings individually (`noImplicitAny`, `strictNullChecks`, `strictBindCallApply`, `strictPropertyInitialization`, `noImplicitReturns`) rather than using the `strict` umbrella flag.
 
