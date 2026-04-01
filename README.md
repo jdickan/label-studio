@@ -112,7 +112,7 @@ Key UI features:
 Stores layout zone definitions — where each piece of content sits on a label. Zones use relative positioning (percentages of label width/height). Templates are associated with a specific label sheet and optionally enable safe area guides (bleed + live area insets).
 
 ### Product Catalog
-Supports three product types: `soy_candle`, `room_spray`, `room_diffuser`. Stores: name, scent notes, SKU, size, weight, ingredients, burn time, wax type, warnings, location, active flag.
+Supports four product types: `soy_candle`, `room_spray`, `room_diffuser`, `other`. Stores: name (required), scent name (required), size (required), scent notes, SKU, weight, ingredients, burn time, wax type, warnings, location, active flag, linked label template.
 
 ### Print Jobs
 Groups products onto a label sheet with a quantity per product. Generates a print-ready batch layout.

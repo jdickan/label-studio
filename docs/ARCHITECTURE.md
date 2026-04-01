@@ -119,17 +119,17 @@ Layout zone definitions for a label design. Associated with a sheet.
 All position and size values are percentage strings relative to the label's physical dimensions. This ensures templates scale correctly across different sheet formats.
 
 #### `products`
-Product catalog. Three product types are supported.
+Product catalog. Four product types are supported.
 
 | Column | Type | Notes |
 |---|---|---|
 | `id` | serial PK | |
-| `product_type` | text enum | `soy_candle` / `room_spray` / `room_diffuser` |
-| `name` | text | Product display name |
-| `scent_name` | text | nullable; scent variant name |
+| `product_type` | text enum | `soy_candle` / `room_spray` / `room_diffuser` / `other` |
+| `name` | text | **required** — product display name |
+| `scent_name` | text | **required** — scent variant name (e.g. "Meadow Frolic") |
 | `scent_notes` | text | nullable; top/heart/base note description |
-| `size` | text | nullable; e.g. "8 oz" |
-| `weight` | text | nullable; label-ready weight string |
+| `size` | text | **required** — e.g. "8 oz", "4 fl oz" |
+| `weight` | text | nullable; label-ready weight string (e.g. "Net Wt 8 oz (226g)") |
 | `ingredients` | text | nullable |
 | `instructions` | text | nullable |
 | `burn_time` | text | nullable; candles only |
@@ -138,6 +138,7 @@ Product catalog. Three product types are supported.
 | `location` | text | nullable; "Made in …" |
 | `sku` | text | nullable |
 | `is_active` | boolean | Default true |
+| `label_template_id` | integer FK | nullable; → `label_templates.id`, SET NULL on delete |
 | `created_at` | timestamp | |
 | `updated_at` | timestamp | |
 
@@ -150,7 +151,7 @@ Batches products onto a label sheet for printing.
 | `name` | text | e.g. "Weekend Batch" |
 | `label_sheet_id` | integer FK | → `label_sheets.id` |
 | `items` | jsonb | Array of `{ productId, quantity }` |
-| `status` | text enum | `draft` / `queued` / `printing` / `done` |
+| `status` | text enum | `draft` / `ready` / `printed` |
 | `notes` | text | nullable |
 | `created_at` | timestamp | |
 | `updated_at` | timestamp | |
@@ -159,11 +160,21 @@ Batches products onto a label sheet for printing.
 
 ```
 label_sheets ←──┬── label_templates.label_sheet_id  (SET NULL on delete)
-                └── print_jobs.label_sheet_id        (no cascade)
+                └── print_jobs.label_sheet_id        (no cascade, required FK)
+
+label_templates ←── products.label_template_id      (SET NULL on delete, optional)
 
 design_system    (singleton, no foreign keys)
-products         (standalone)
 ```
+
+### Font Storage — No `brand_fonts` Table
+
+There is **no persistent `brand_fonts` database table**. Font management is session-local:
+
+- The Brand Settings page provides `FontUploadCard` components that use the browser `FontFace` API to load uploaded font files (`FontFace(name, url(dataUrl))`).
+- Loaded fonts are added to `document.fonts` and are active for the current browser session only.
+- The font family names (`headingFont`, `bodyFont`) are stored as plain text strings in `design_system`. Users enter the CSS family name matching their uploaded or Google font.
+- Font files themselves are not persisted to the server or database in the current implementation. Persistent server-side font storage is planned for a future task.
 
 ---
 
@@ -205,17 +216,17 @@ lib/api-spec/openapi.yaml
 
 The PDF template upload flow uses Server-Sent Events to stream real-time analysis progress to the browser:
 
-1. `POST /api/label-sheets/upload-pdf` — multer accepts one or more PDF files into memory; assigns a UUID `jobId` per file; kicks off analysis in the background; returns `{ jobs: [{ jobId, filename }] }`.
-2. Frontend opens `EventSource` connections to `GET /api/label-sheets/analyze/:jobId/events` for each job.
-3. The analysis function runs 12 sequential steps, emitting an SSE event after each step completes:
+1. `POST /api/label-sheets/upload-pdf` — multer accepts one or more PDF files into memory as a single batch. One UUID `jobId` is assigned for the whole batch. Returns `{ jobId, fileCount, filenames[] }`.
+2. Frontend opens **one** `EventSource` to `GET /api/label-sheets/analyze/:jobId/events` for the batch.
+3. The server processes each file sequentially. Each SSE event includes a `filename` field so the frontend can route progress to the correct file's checklist panel. The 12 steps run per-file:
    ```
-   data: {"step":1,"label":"PDF Format Validation","status":"done","detail":"..."}
+   data: {"filename":"OL5225.pdf","step":1,"label":"PDF Format Validation","status":"done","detail":"..."}
    ```
-4. On completion, the final event includes the extracted measurements.
-5. Frontend closes the `EventSource`; the review modal shows a diff-editable form with extracted values.
+4. On completion of each file, a final event includes the extracted measurements for that file.
+5. After all files complete, the frontend closes the `EventSource`; the review modal shows a diff-editable form with extracted values for each file.
 6. User submits to `POST /api/label-sheets/import` which bulk-inserts the verified sheets.
 
-SSE state is held in a `Map<string, AnalysisJob>` in-process. It is not persisted; a server restart clears in-flight jobs.
+SSE state is held in a `Map<string, Job>` in-process (each `Job` has a `FileResult[]` array). It is not persisted; a server restart clears in-flight jobs. Jobs auto-delete after 5 minutes.
 
 ---
 

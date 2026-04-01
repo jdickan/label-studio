@@ -218,7 +218,7 @@ The total number of labels is the sum of all quantities. The label sheet's `labe
 ### Status lifecycle
 
 ```
-draft → queued → printing → done
+draft → ready → printed
 ```
 
 Jobs start as `draft`. The status is updated manually; there is no automated state machine.
