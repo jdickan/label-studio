@@ -4,8 +4,8 @@ import { ShellContext } from "@/context/shell-context";
 import AppSidebar from "./app-sidebar";
 
 const PAGE_TITLES: Record<string, string> = {
-  "/": "Dashboard",
-  "/dashboard": "Dashboard",
+  "/": "Label Maker",
+  "/dashboard": "Label Maker",
   "/products": "Products",
   "/label-sheets": "Sheets",
   "/zones": "Zones",
@@ -25,12 +25,12 @@ export default function Shell({ children }: { children: ReactNode }) {
       <div className="flex h-screen overflow-hidden bg-secondary/30">
         <AppSidebar />
         <div className="flex flex-col flex-1 min-w-0">
-          <header className="h-11 border-b bg-card flex items-center px-4 shrink-0 shadow-sm z-10">
+          <header className="h-11 border-b bg-card flex items-center px-4 shrink-0 shadow-sm z-10 gap-4">
             <span className="font-semibold text-sm tracking-tight text-foreground">
               {pageTitle}
             </span>
             {topBarState.actions && (
-              <div className="ml-auto flex items-center gap-2">
+              <div className="ml-auto flex items-center gap-1.5">
                 {topBarState.actions}
               </div>
             )}

@@ -1,4 +1,5 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
+import { useShell } from "@/context/shell-context";
 import PageWrapper from "@/components/layout/page-wrapper";
 import { 
   useGetLabelSheets, 
@@ -754,6 +755,7 @@ function PdfUploadModal({ open, onClose, onImported }: {
 // ─── Main LabelSheets page ────────────────────────────────────────────────────
 
 export default function LabelSheets() {
+  const { setTopBarState } = useShell();
   const { data: sheets, isLoading } = useGetLabelSheets({ query: { queryKey: getGetLabelSheetsQueryKey() } });
   const [isDialogOpen, setIsDialogOpen]       = useState(false);
   const [previewSheet, setPreviewSheet]        = useState<LabelSheet | null>(null);
@@ -890,21 +892,27 @@ export default function LabelSheets() {
     }
   };
 
-  return (
-    <PageWrapper>
-    <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="flex justify-end items-center">
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setIsPdfUploadOpen(true)}>
-            <Upload className="w-4 h-4 mr-2" />
+  useEffect(() => {
+    setTopBarState({
+      actions: (
+        <div className="flex items-center gap-1.5">
+          <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setIsPdfUploadOpen(true)}>
+            <Upload className="w-3.5 h-3.5 mr-1" />
             Upload Template PDF
           </Button>
-          <Button onClick={handleCreate}>
-            <Plus className="w-4 h-4 mr-2" />
+          <Button size="sm" className="h-7 text-xs" onClick={handleCreate}>
+            <Plus className="w-3.5 h-3.5 mr-1" />
             Add Custom Sheet
           </Button>
         </div>
-      </div>
+      ),
+    });
+    return () => setTopBarState({});
+  }, []);
+
+  return (
+    <PageWrapper>
+    <div className="space-y-6 animate-in fade-in duration-500">
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {isLoading ? (

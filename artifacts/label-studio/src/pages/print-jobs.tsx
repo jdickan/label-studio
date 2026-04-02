@@ -1,4 +1,5 @@
-import { useState, useMemo, useRef, useCallback } from "react";
+import { useState, useMemo, useRef, useCallback, useEffect } from "react";
+import { useShell } from "@/context/shell-context";
 import PageWrapper from "@/components/layout/page-wrapper";
 import { 
   useGetPrintJobs, 
@@ -377,6 +378,7 @@ type FormData = {
 };
 
 export default function PrintJobs() {
+  const { setTopBarState } = useShell();
   const { data: printJobs, isLoading } = useGetPrintJobs({ query: { queryKey: getGetPrintJobsQueryKey() } });
   const { data: sheets } = useGetLabelSheets({ query: { queryKey: ["labelSheets"] } });
   const { data: products } = useGetProducts({ query: { queryKey: ["products"] } });
@@ -834,15 +836,21 @@ export default function PrintJobs() {
     return Math.ceil(totalLabelsInForm / usableSlotsPerSheet);
   }, [usableSlotsPerSheet, totalLabelsInForm]);
 
+  useEffect(() => {
+    setTopBarState({
+      actions: (
+        <Button onClick={openCreate} data-testid="button-create-job" size="sm" className="h-7 text-xs">
+          <Plus className="w-3.5 h-3.5 mr-1" />
+          New Print Job
+        </Button>
+      ),
+    });
+    return () => setTopBarState({});
+  }, []);
+
   return (
     <PageWrapper>
     <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="flex justify-end items-center print:hidden">
-        <Button onClick={openCreate} data-testid="button-create-job">
-          <Plus className="w-4 h-4 mr-2" />
-          New Print Job
-        </Button>
-      </div>
 
       <div className="border rounded-md bg-card print:hidden">
         <Table>

@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import { useShell } from "@/context/shell-context";
 import {
   useGetLabelTemplates,
   useGetLabelSheets,
@@ -1043,6 +1044,7 @@ function sheetAspect(sheet: LabelSheet | undefined): number {
 }
 
 export default function Zones() {
+  const { setTopBarState } = useShell();
   const { data: templates, isLoading } = useGetLabelTemplates({ query: { queryKey: getGetLabelTemplatesQueryKey() } });
   const { data: sheets } = useGetLabelSheets({ query: { queryKey: ["labelSheets"] } });
   const { data: designSystem } = useGetDesignSystem({ query: { queryKey: getGetDesignSystemQueryKey() } });
@@ -1355,47 +1357,52 @@ export default function Zones() {
     }
   }, [activeTemplateId, toast, queryClient]);
 
-  return (
-    <div className="flex flex-col h-full animate-in fade-in duration-500">
-      {/* Action bar */}
-      <div className="flex justify-end items-center px-4 py-2 border-b bg-card shrink-0">
-        <div className="flex gap-2">
+  useEffect(() => {
+    setTopBarState({
+      actions: (
+        <div className="flex items-center gap-1.5">
           {isEditing && (
             <>
-              <Button variant="outline" size="sm" onClick={() => setShowPreview(true)}>
-                <Eye className="w-4 h-4 mr-1" /> Preview
+              <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setShowPreview(true)}>
+                <Eye className="w-3.5 h-3.5 mr-1" /> Preview
               </Button>
               <Button
-                variant="outline" size="sm"
+                variant="outline" size="sm" className="h-7 text-xs"
                 onClick={handleSaveAsDefault}
                 disabled={zones.length === 0}
                 title="Save the current zone layout as your default — apply it to any new template"
               >
-                {hasMyDefault ? <BookmarkCheck className="w-4 h-4 mr-1" /> : <Bookmark className="w-4 h-4 mr-1" />}
+                {hasMyDefault ? <BookmarkCheck className="w-3.5 h-3.5 mr-1" /> : <Bookmark className="w-3.5 h-3.5 mr-1" />}
                 Save as Default
               </Button>
-              <Button variant="outline" size="sm" onClick={handleAddZone}>
-                <Plus className="w-4 h-4 mr-1" /> Add Zone
+              <Button variant="outline" size="sm" className="h-7 text-xs" onClick={handleAddZone}>
+                <Plus className="w-3.5 h-3.5 mr-1" /> Add Zone
               </Button>
             </>
           )}
-          <Button onClick={handleSave} disabled={isSaving || !isEditing}>
-            <Save className="w-4 h-4 mr-2" />
+          <Button size="sm" className="h-7 text-xs" onClick={handleSave} disabled={isSaving || !isEditing}>
+            <Save className="w-3.5 h-3.5 mr-1" />
             {activeTemplateId ? "Save Changes" : "Save Template"}
           </Button>
           {activeTemplateId && (
             <Button
-              variant="outline" size="sm"
+              variant="outline" size="sm" className="h-7 text-xs"
               onClick={handleCascade}
               disabled={cascading}
               title="Push this template's zone layout down to all child templates"
             >
-              {cascading ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <GitBranch className="w-4 h-4 mr-1" />}
+              {cascading ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <GitBranch className="w-3.5 h-3.5 mr-1" />}
               Cascade
             </Button>
           )}
         </div>
-      </div>
+      ),
+    });
+    return () => setTopBarState({});
+  }, [isEditing, zones.length, isSaving, activeTemplateId, cascading, hasMyDefault]);
+
+  return (
+    <div className="flex flex-col h-full animate-in fade-in duration-500">
 
       <div className="flex flex-1 gap-4 min-h-0">
         {/* Sidebar */}

@@ -1,10 +1,9 @@
 import { Link, useLocation } from "wouter";
-import { Home, Printer, Droplets, LayoutTemplate, Sparkles, Layers, Palette } from "lucide-react";
+import { Printer, Droplets, LayoutTemplate, Sparkles, Layers, Palette } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ravenLogo from "/raven-logo.webp";
 
 const navigation = [
-  { name: "Dashboard",  href: "/dashboard",     icon: Home           },
   { name: "Print Jobs", href: "/print-jobs",     icon: Printer        },
   { name: "Products",   href: "/products",       icon: Droplets       },
   { name: "Zones",      href: "/zones",          icon: LayoutTemplate },
@@ -15,15 +14,27 @@ const navigation = [
 
 export default function AppSidebar() {
   const [location] = useLocation();
+  const isAtDashboard = location === "/" || location === "/dashboard";
 
   return (
     <nav className="w-14 flex-shrink-0 bg-card border-r flex flex-col py-2 z-20 overflow-visible">
       <div className="flex items-center justify-center h-11 mb-1 flex-shrink-0">
-        <img
-          src={ravenLogo}
-          alt="Label Studio"
-          className="w-7 h-7 rounded object-cover shadow-sm"
-        />
+        <Link
+          href="/dashboard"
+          className={cn(
+            "flex items-center justify-center w-10 h-10 rounded-lg transition-colors duration-150",
+            isAtDashboard
+              ? "bg-primary text-primary-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground hover:bg-muted"
+          )}
+          title="Label Maker"
+        >
+          <img
+            src={ravenLogo}
+            alt="Label Maker"
+            className="w-6 h-6 rounded object-cover"
+          />
+        </Link>
       </div>
 
       <div className="flex-1 flex flex-col gap-0.5 px-2 overflow-visible">

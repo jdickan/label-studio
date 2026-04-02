@@ -1083,28 +1083,36 @@ export default function Designs() {
 
   useEffect(() => {
     const title = activeDesign ? activeDesign.name : "Designs";
-    const actions = activeDesignId ? (
-      <div className="flex items-center gap-2">
-        <Select value={selectedSheetId} onValueChange={handleSheetChange}>
-          <SelectTrigger className="h-7 text-xs w-40">
-            <SelectValue placeholder="No sheet" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">No sheet</SelectItem>
-            {sheets.map((s) => (
-              <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Button onClick={handleSave} disabled={isSaving || !isDirty} size="sm" variant={isDirty ? "default" : "ghost"} className="h-7 text-xs px-3">
-          <Save className="w-3.5 h-3.5 mr-1" />
-          {isSaving ? "Saving…" : isDirty ? "Save" : "Saved"}
+    const actions = (
+      <div className="flex items-center gap-1.5">
+        <Button size="sm" className="h-7 text-xs" onClick={handleCreate} title="Create a new design">
+          <Plus className="w-3.5 h-3.5 mr-1" />
+          New Design
         </Button>
+        {activeDesignId && (
+          <>
+            <Select value={selectedSheetId} onValueChange={handleSheetChange}>
+              <SelectTrigger className="h-7 text-xs w-40">
+                <SelectValue placeholder="No sheet" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">No sheet</SelectItem>
+                {sheets.map((s) => (
+                  <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button onClick={handleSave} disabled={isSaving || !isDirty} size="sm" variant={isDirty ? "default" : "ghost"} className="h-7 text-xs px-3">
+              <Save className="w-3.5 h-3.5 mr-1" />
+              {isSaving ? "Saving…" : isDirty ? "Save" : "Saved"}
+            </Button>
+          </>
+        )}
       </div>
-    ) : undefined;
+    );
     setTopBarState({ title, actions });
     return () => setTopBarState({});
-  }, [activeDesign, activeDesignId, isDirty, isSaving, selectedSheetId, sheets]);
+  }, [activeDesignId, isDirty, isSaving, selectedSheetId, sheets.length]);
 
   return (
     <div className="flex h-full overflow-hidden">

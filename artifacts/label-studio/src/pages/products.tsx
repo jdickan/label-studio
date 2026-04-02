@@ -1,4 +1,5 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
+import { useShell } from "@/context/shell-context";
 import PageWrapper from "@/components/layout/page-wrapper";
 import { 
   useGetProducts, 
@@ -75,6 +76,7 @@ function toCsvCell(v: unknown): string {
 }
 
 export default function Products() {
+  const { setTopBarState } = useShell();
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [isSheetOpen, setIsSheetOpen] = useState(false);
@@ -275,11 +277,10 @@ export default function Products() {
     }
   };
 
-  return (
-    <PageWrapper>
-    <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="flex flex-col sm:flex-row justify-end items-start sm:items-center gap-4">
-        <div className="flex items-center gap-2">
+  useEffect(() => {
+    setTopBarState({
+      actions: (
+        <div className="flex items-center gap-1.5">
           <input
             ref={csvInputRef}
             type="file"
@@ -287,25 +288,32 @@ export default function Products() {
             className="hidden"
             onChange={handleImportCsv}
           />
-          <Button variant="outline" size="sm" onClick={handleDownloadCsv} title="Download all products as a spreadsheet">
-            <Download className="w-4 h-4 mr-2" />
+          <Button variant="outline" size="sm" className="h-7 text-xs" onClick={handleDownloadCsv} title="Download all products as a spreadsheet">
+            <Download className="w-3.5 h-3.5 mr-1" />
             Export CSV
           </Button>
           <Button
-            variant="outline" size="sm"
+            variant="outline" size="sm" className="h-7 text-xs"
             onClick={() => csvInputRef.current?.click()}
             disabled={isImporting}
             title="Upload a CSV to bulk-create products"
           >
-            <Upload className="w-4 h-4 mr-2" />
+            <Upload className="w-3.5 h-3.5 mr-1" />
             {isImporting ? "Importing…" : "Import CSV"}
           </Button>
-          <Button onClick={handleCreate} data-testid="button-create-product">
-            <Plus className="w-4 h-4 mr-2" />
+          <Button size="sm" className="h-7 text-xs" onClick={handleCreate} data-testid="button-create-product">
+            <Plus className="w-3.5 h-3.5 mr-1" />
             New Product
           </Button>
         </div>
-      </div>
+      ),
+    });
+    return () => setTopBarState({});
+  }, [isImporting]);
+
+  return (
+    <PageWrapper>
+    <div className="space-y-6 animate-in fade-in duration-500">
 
       <div className="flex flex-col sm:flex-row gap-4 items-center mb-4 bg-card p-4 rounded-lg border shadow-sm">
         <div className="relative w-full sm:w-72">
