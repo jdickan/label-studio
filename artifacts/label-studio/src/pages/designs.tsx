@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useParams, useLocation } from "wouter";
 import { useShell } from "@/context/shell-context";
 import PageWrapper from "@/components/layout/page-wrapper";
 import { useQueryClient } from "@tanstack/react-query";
@@ -944,6 +945,8 @@ export default function Designs() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { setTopBarState } = useShell();
+  const params = useParams<{ id?: string }>();
+  const [location] = useLocation();
 
   const { data: allDesigns = [], isLoading } = useGetLabelDesigns({ query: { queryKey: getGetLabelDesignsQueryKey() } });
   const { data: sheets = [] } = useGetLabelSheets({ query: { queryKey: getGetLabelSheetsQueryKey() } });
@@ -955,6 +958,7 @@ export default function Designs() {
 
   const [editingMode, setEditingMode] = useState(false);
   const [activeDesignId, setActiveDesignId] = useState<number | null>(null);
+  const [autoOpenedId, setAutoOpenedId] = useState<number | null>(null);
   const [objects, setObjects] = useState<DesignObj[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>("");
@@ -977,9 +981,60 @@ export default function Designs() {
     designSystem?.bodyFont,
   ].filter((f): f is string => Boolean(f));
 
+  const urlDesignId = (() => {
+    if (params.id) return parseInt(params.id, 10);
+    const search = location.includes("?") ? location.slice(location.indexOf("?")) : "";
+    const openId = new URLSearchParams(search).get("openId");
+    return openId ? parseInt(openId, 10) : null;
+  })();
+
+  useEffect(() => {
+    if (!urlDesignId || isLoading || allDesigns.length === 0) return;
+    if (autoOpenedId === urlDesignId) return;
+    const target = allDesigns.find((d) => d.id === urlDesignId);
+    if (target) {
+      setAutoOpenedId(urlDesignId);
+      loadDesign(target);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlDesignId, isLoading, allDesigns, autoOpenedId]);
+
+  function normaliseObject(raw: Record<string, unknown>): DesignObj {
+    const type = raw.type as string;
+    const base: ObjBase = {
+      id: (raw.id as string) ?? crypto.randomUUID(),
+      x: (raw.x as number) ?? 0,
+      y: (raw.y as number) ?? 0,
+      w: (raw.w as number) ?? (raw.width as number) ?? 1,
+      h: (raw.h as number) ?? (raw.height as number) ?? 0.5,
+      locked: (raw.locked as boolean) ?? false,
+      visible: (raw.visible as boolean) ?? true,
+    };
+    if (type === "rect") {
+      return { ...base, type: "rect", fill: (raw.fill as string) ?? "#e5e7eb", stroke: (raw.stroke as string) ?? "#6b7280", strokeWidth: (raw.strokeWidth as number) ?? 1, borderRadius: (raw.borderRadius as number) ?? 0 };
+    }
+    if (type === "ellipse") {
+      return { ...base, type: "ellipse", fill: (raw.fill as string) ?? "#e5e7eb", stroke: (raw.stroke as string) ?? "#6b7280", strokeWidth: (raw.strokeWidth as number) ?? 1 };
+    }
+    return {
+      ...base,
+      type: "text",
+      content: (raw.content as string) ?? (raw.text as string) ?? "",
+      fontFamily: (raw.fontFamily as string) ?? "Arial",
+      fontSize: (raw.fontSize as number) ?? 18,
+      bold: (raw.bold as boolean) ?? false,
+      italic: (raw.italic as boolean) ?? false,
+      underline: (raw.underline as boolean) ?? false,
+      align: ((raw.align as string) ?? (raw.textAlign as string) ?? "left") as "left" | "center" | "right",
+      letterSpacing: (raw.letterSpacing as number) ?? 0,
+      color: (raw.color as string) ?? "#000000",
+    };
+  }
+
   function loadDesign(design: LabelDesign) {
     setActiveDesignId(design.id);
-    setObjects((design.objects as DesignObj[]) ?? []);
+    const rawObjects = Array.isArray(design.objects) ? design.objects as Record<string, unknown>[] : [];
+    setObjects(rawObjects.map(normaliseObject));
     setSelectedSheetId(design.labelSheetId ? String(design.labelSheetId) : "none");
     setSelectedId(null);
     setEditingId("");

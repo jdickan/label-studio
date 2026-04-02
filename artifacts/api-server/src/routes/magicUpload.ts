@@ -179,9 +179,11 @@ Rules for zone detection:
   * Never create "logo-area" zones that are actually rotated text — keep as text zone with rotation instead
 - For angled/vertical text zones, estimate rotation accurately:
   * 0° = horizontal text (left-to-right)
-  * 90° = text rotated 90° clockwise (reads bottom-to-top when rotated)
-  * -90° = text rotated 90° counter-clockwise (reads top-to-bottom when rotated)
+  * -90° = text on the RIGHT side of the label that reads upward (bottom of text points right) — USE THIS for right-edge disclaimer, address, and legal text
+  * 90° = text rotated 90° clockwise (reads downward, top of text points right) — rare
   * Preserve rotation for disclaimer/warning text on edges
+- CRITICAL — right-side vertical zones (rotation −90°): the zone box coordinates describe where the ROTATED BOX sits on the canvas BEFORE rotation. For text on the right edge reading upward, set x close to the right edge (e.g. 0.85–0.95), and ENSURE x + w ≤ 1.0. The zone must fit WITHIN the label, not beyond it.
+- CRITICAL — coordinate boundary: x + w MUST be ≤ 1.0 and y + h MUST be ≤ 1.0 for every zone. Clip or reduce w/h to enforce this.
 - If text and image content overlap in the same area, create separate zones — prefer text zones over image zones when unsure
 - Return ONLY the JSON object, no markdown, no explanation, no code fences`;
 
@@ -289,14 +291,18 @@ async function runAnalysis(jobId: string, filename: string, buffer: Buffer, mime
     const zones: DetectedZone[] = rawZones
       .filter((z) => ZONE_ROLES.includes(z.role as typeof ZONE_ROLES[number]) && typeof z.x === "number")
       .map((z) => {
+        const x = Math.max(0, Math.min(0.99, z.x as number));
+        const y = Math.max(0, Math.min(0.99, z.y as number));
+        const w = Math.max(0.01, Math.min(1 - x, z.w as number));
+        const h = Math.max(0.01, Math.min(1 - y, z.h as number));
         const partial = {
           id: randomUUID(),
           role: z.role as string,
           text: typeof z.text === "string" ? z.text : "",
-          x: Math.max(0, Math.min(1, z.x as number)),
-          y: Math.max(0, Math.min(1, z.y as number)),
-          w: Math.max(0.01, Math.min(1, z.w as number)),
-          h: Math.max(0.01, Math.min(1, z.h as number)),
+          x,
+          y,
+          w,
+          h,
           color: typeof z.color === "string" ? z.color : "#ffffff",
           fontSize: Math.max(6, Math.min(32, typeof z.fontSize === "number" ? z.fontSize : 10)),
           textAlign: (["left", "center", "right"].includes(z.textAlign as string) ? z.textAlign : "left") as "left" | "center" | "right",
