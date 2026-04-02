@@ -951,6 +951,7 @@ export default function Designs() {
   const updateMut = useUpdateLabelDesign();
   const deleteMut = useDeleteLabelDesign();
 
+  const [editingMode, setEditingMode] = useState(false);
   const [activeDesignId, setActiveDesignId] = useState<number | null>(null);
   const [objects, setObjects] = useState<DesignObj[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -981,6 +982,17 @@ export default function Designs() {
     setSelectedId(null);
     setEditingId("");
     setIsDirty(false);
+    setEditingMode(true);
+  }
+
+  function exitEditingMode() {
+    setEditingMode(false);
+    setActiveDesignId(null);
+    setObjects([]);
+    setSelectedId(null);
+    setEditingId("");
+    setSelectedSheetId("none");
+    setIsDirty(false);
   }
 
   function updateObj(id: string, patch: Partial<DesignObj>) {
@@ -1006,6 +1018,7 @@ export default function Designs() {
       const design = await createMut.mutateAsync({ data: { name: "New Design", objects: [] } });
       await queryClient.invalidateQueries({ queryKey: getGetLabelDesignsQueryKey() });
       loadDesign(design);
+      toast({ title: "Design created", description: "Start designing your label" });
     } catch {
       toast({ title: "Error", description: "Could not create design", variant: "destructive" });
     }
@@ -1077,8 +1090,8 @@ export default function Designs() {
   }, [activeDesignId, objects.length, selectedSheetId, isDirty]);
 
   useEffect(() => {
-    const title = activeDesign ? activeDesign.name : "Designs";
-    const actions = (
+    const title = editingMode && activeDesign ? activeDesign.name : "Designs";
+    const actions = editingMode ? (
       <div className="flex items-center gap-1.5">
         {activeDesignId && (
           <Select value={selectedSheetId} onValueChange={handleSheetChange}>
@@ -1093,21 +1106,22 @@ export default function Designs() {
             </SelectContent>
           </Select>
         )}
+        <Button onClick={handleSave} disabled={isSaving || !isDirty} size="sm" variant={isDirty ? "default" : "ghost"} className="h-7 text-xs px-3">
+          <Save className="w-3.5 h-3.5 mr-1" />
+          {isSaving ? "Saving…" : isDirty ? "Save" : "Saved"}
+        </Button>
+      </div>
+    ) : (
+      <div className="flex items-center gap-1.5">
         <Button size="sm" className="h-7 text-xs" onClick={handleCreate} title="Create a new design">
           <Plus className="w-3.5 h-3.5 mr-1" />
           New Design
         </Button>
-        {activeDesignId && (
-          <Button onClick={handleSave} disabled={isSaving || !isDirty} size="sm" variant={isDirty ? "default" : "ghost"} className="h-7 text-xs px-3">
-            <Save className="w-3.5 h-3.5 mr-1" />
-            {isSaving ? "Saving…" : isDirty ? "Save" : "Saved"}
-          </Button>
-        )}
       </div>
     );
     setTopBarState({ title, actions });
     return () => setTopBarState({});
-  }, [activeDesignId, activeDesign?.name, isDirty, isSaving, selectedSheetId]);
+  }, [editingMode, activeDesignId, activeDesign?.name, isDirty, isSaving, selectedSheetId]);
 
   return (
     <div className="flex h-full overflow-hidden">
