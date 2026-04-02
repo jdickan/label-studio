@@ -1042,7 +1042,7 @@ function sheetAspect(sheet: LabelSheet | undefined): number {
   return sheet.labelWidth / sheet.labelHeight;
 }
 
-export default function LabelTemplates() {
+export default function Zones() {
   const { data: templates, isLoading } = useGetLabelTemplates({ query: { queryKey: getGetLabelTemplatesQueryKey() } });
   const { data: sheets } = useGetLabelSheets({ query: { queryKey: ["labelSheets"] } });
   const { data: designSystem } = useGetDesignSystem({ query: { queryKey: getGetDesignSystemQueryKey() } });
