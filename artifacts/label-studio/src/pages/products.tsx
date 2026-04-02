@@ -87,7 +87,7 @@ export default function Products() {
   const queryClient = useQueryClient();
 
   const { data: products, isLoading } = useGetProducts(
-    { query: { search: search || undefined, productType: typeFilter !== "all" ? typeFilter : undefined } },
+    { search: search || undefined, productType: typeFilter !== "all" ? typeFilter : undefined },
     { query: { queryKey: getGetProductsQueryKey({ search: search || undefined, productType: typeFilter !== "all" ? typeFilter : undefined }) } }
   );
 
