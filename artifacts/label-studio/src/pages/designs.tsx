@@ -45,6 +45,10 @@ import {
   Sparkles,
 } from "lucide-react";
 
+// ── Constants ─────────────────────────────────────────────────────────────────
+
+const MIN_SIZE = 0.1;
+
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 type ObjBase = {
@@ -736,7 +740,6 @@ function DesignCanvas({
     const [cx, cy] = getCanvasPoint(e);
     const dx = toIn(cx - drag.startX, zoom);
     const dy = toIn(cy - drag.startY, zoom);
-    const MIN_SIZE = 0.1;
 
     if (drag.type === "move") {
       const newX = clamp(drag.origX + dx, 0, labelW - drag.origW);
@@ -775,49 +778,52 @@ function DesignCanvas({
       ? `${px(cornerRadius / 72, zoom)}px`
       : 0;
 
+  const bleedPx = px(bleedInches, zoom);
+
   return (
-    <div
-      ref={canvasRef}
-      style={{
-        width: cW,
-        height: cH,
-        position: "relative",
-        background: "white",
-        boxShadow: "0 4px 24px rgba(0,0,0,0.18)",
-        flexShrink: 0,
-        borderRadius: dieCutRadius,
-        overflow: "hidden",
-      }}
-      onPointerDown={onCanvasPointerDown}
-      onPointerMove={onCanvasPointerMove}
-      onPointerUp={onCanvasPointerUp}
-    >
-      {/* Bleed guide (outside label area) */}
+    <div style={{ position: "relative", padding: bleedPx, display: "inline-block", flexShrink: 0 }}>
+      {/* Bleed guide — outside the label, visible through the padding */}
       <div
         style={{
           position: "absolute",
-          top: -px(bleedInches, zoom),
-          left: -px(bleedInches, zoom),
-          right: -px(bleedInches, zoom),
-          bottom: -px(bleedInches, zoom),
-          border: "1px dashed rgba(255,0,0,0.3)",
+          inset: 0,
+          border: "1px dashed rgba(220,0,0,0.45)",
+          borderRadius: dieCutRadius,
           pointerEvents: "none",
           zIndex: 0,
         }}
       />
-      {/* Live-area / safe-area guide (inside label) */}
+
+      {/* Label canvas — clips objects to the die-cut shape */}
       <div
+        ref={canvasRef}
         style={{
-          position: "absolute",
-          top: px(safeInches, zoom),
-          left: px(safeInches, zoom),
-          right: px(safeInches, zoom),
-          bottom: px(safeInches, zoom),
-          border: "1px dashed rgba(0,120,255,0.3)",
-          pointerEvents: "none",
-          zIndex: 0,
+          width: cW,
+          height: cH,
+          position: "relative",
+          background: "white",
+          boxShadow: "0 4px 24px rgba(0,0,0,0.18)",
+          borderRadius: dieCutRadius,
+          overflow: "hidden",
+          border: "1.5px solid #374151",
         }}
-      />
+        onPointerDown={onCanvasPointerDown}
+        onPointerMove={onCanvasPointerMove}
+        onPointerUp={onCanvasPointerUp}
+      >
+        {/* Safe-area guide (inside label) */}
+        <div
+          style={{
+            position: "absolute",
+            top: px(safeInches, zoom),
+            left: px(safeInches, zoom),
+            right: px(safeInches, zoom),
+            bottom: px(safeInches, zoom),
+            border: "1px dashed rgba(0,120,255,0.3)",
+            pointerEvents: "none",
+            zIndex: 0,
+          }}
+        />
 
       {/* Objects */}
       {objects.map((obj) => {
@@ -942,6 +948,7 @@ function DesignCanvas({
           </div>
         );
       })}
+      </div>
     </div>
   );
 }
@@ -993,7 +1000,7 @@ export default function Designs() {
   }
 
   function updateObj(id: string, patch: Partial<DesignObj>) {
-    setObjects((prev) => prev.map((o) => o.id === id ? { ...o, ...patch } : o));
+    setObjects((prev) => prev.map((o) => o.id === id ? { ...o, ...patch } as DesignObj : o));
     setIsDirty(true);
   }
 
