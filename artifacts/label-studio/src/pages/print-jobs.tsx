@@ -560,33 +560,32 @@ export default function PrintJobs() {
 
     const images: string[] = [];
     for (const el of Array.from(sheetEls)) {
-      const clone = el.cloneNode(true) as HTMLElement;
-      const walk = (node: Node) => {
-        if (node.nodeType === Node.ELEMENT_NODE) {
-          const elem = node as HTMLElement;
-          const computed = getComputedStyle(elem);
-          if (computed.color && computed.color !== "rgba(0, 0, 0, 0)") {
-            elem.style.color = computed.color;
-          }
-          if (computed.backgroundColor && computed.backgroundColor !== "rgba(0, 0, 0, 0)") {
-            elem.style.backgroundColor = computed.backgroundColor;
-          }
-          if (computed.borderColor && computed.borderColor !== "rgba(0, 0, 0, 0)") {
-            elem.style.borderColor = computed.borderColor;
-          }
-          for (let i = 0; i < node.childNodes.length; i++) {
-            walk(node.childNodes[i]);
-          }
+      try {
+        const canvas = await html2canvas(el, {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: "#ffffff",
+          logging: false,
+          allowTaint: true,
+        });
+        images.push(canvas.toDataURL("image/png"));
+      } catch (err) {
+        console.warn("html2canvas error, falling back to simple render:", err);
+        const w = parseInt(el.style.width) * 96 * 2;
+        const h = parseInt(el.style.height) * 96 * 2;
+        const fallbackCanvas = document.createElement("canvas");
+        fallbackCanvas.width = w;
+        fallbackCanvas.height = h;
+        const ctx = fallbackCanvas.getContext("2d");
+        if (ctx) {
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, w, h);
+          ctx.fillStyle = "#999";
+          ctx.font = "20px sans-serif";
+          ctx.fillText("Unable to render PDF", 20, 30);
         }
-      };
-      walk(clone);
-      const canvas = await html2canvas(clone, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: "#ffffff",
-        logging: false,
-      });
-      images.push(canvas.toDataURL("image/png"));
+        images.push(fallbackCanvas.toDataURL("image/png"));
+      }
     }
     return images;
   }, [previewRef]);
