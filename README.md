@@ -124,13 +124,61 @@ Single-row config table storing colors (primary, secondary, accent, text, backgr
 ### Dashboard
 Summary stats (total sheets, templates, products, print jobs), recent print jobs, and a product breakdown by type.
 
+### Magic Upload — AI Label Ingestor ✨
+A drag-and-drop hero on the Dashboard that powers end-to-end label template creation from a physical label image:
+- **Upload any label image** (JPEG, PNG, or PDF) with a drag-and-drop area
+- **12-step AI analysis** (SSE-streamed progress):
+  - File format validation
+  - Image conversion (PDF → PNG via pdftoppm)
+  - GPT-4o vision analysis with high detail
+  - Layout/dimensions detection
+  - Background color extraction
+  - Zone mapping (7+ distinct content areas)
+  - Text validation + typography detection
+  - Brand element extraction (name, website, address, colors)
+  - Product type classification
+  - Dominant color palette extraction
+  - Address country code & address validation
+  - Final thumbnail generation
+- **Review & Confirm dialog** with live editing:
+  - Editable template name (not locked to filename)
+  - Detected zones list with toggles to include/exclude each
+  - Label dimensions (width/height in inches, auto-detected)
+  - Background color editor (hex input + swatch)
+  - Detected zones with role badges, zone text, color swatches
+  - Brand elements section (brand name, website, address, dominant colors)
+  - Product type selector
+  - Optional brand logo upload
+  - **Master template toggle** — checkbox to designate this template as the default for all new labels
+- **Auto-imports to Zones** with:
+  - Text rotation support (vertical/angled text on labels now preserved)
+  - Proper zone classification (avoids false "photo-area" placeholders)
+  - Creates or matches a label sheet based on detected dimensions (±0.1" tolerance)
+  - Links the template to the sheet automatically
+  - Success message with "View Zone Template" button
+
+### Zone Editor Enhancements
+- **Master template badge** — Templates designated as master display a ✦ Master badge in amber on the Zones landing tile
+- **Text rotation** — Text zones now support rotation in degrees (0°, 90°, -90°, 180°, etc.), detecting and preserving angled text from label images
+- **Improved zone visualization** — Phantom image placeholders eliminated by smarter classification rules
+
 ---
+
+## Recent Updates (Latest)
+
+**Magic Upload (v1)** — Complete end-to-end label ingestion pipeline:
+- Upload any label image (JPEG, PNG, PDF) and get a fully-formed template in seconds
+- 12-step AI-powered analysis with real-time progress streaming
+- Edit detected zones, dimensions, brand elements, and colors in a review dialog
+- Set templates as "master" (default for new labels) right from the import flow
+- Text rotation detection preserves angled/vertical text
+- Smart zone classification prevents phantom image placeholders
 
 ## Known Gaps / Planned Work
 
 - **Print-job content PDF** — print jobs currently produce a browser preview only; a content-rendered PDF (product fields mapped to label zones) is planned
 - **Server-side font storage** — uploaded fonts are session-local via the browser `FontFace` API; persistent server-side font hosting is planned
-- **Visual label template designer** — the current zone editor is a JSON textarea; an upload-driven visual editor (image → LLM zone detection → drag-to-resize) is planned
+- **Visual zone editor refinements** — Magic Upload creates zones automatically; manual editing of zone boundaries (drag-to-resize) in the zone canvas could be more discoverable
 - **PDF guide lines** — margin, safe-area, and bleed geometry is shown in the browser sheet preview but not yet rendered into the downloaded PDF
 
 ## Documentation Index
