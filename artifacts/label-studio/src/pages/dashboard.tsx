@@ -163,7 +163,7 @@ function ReviewConfirmDialog({ open, result, filename, onClose, onImportSuccess 
   const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
   const [logoFilename, setLogoFilename] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
-  const [success, setSuccess] = useState<{ templateId: number } | null>(null);
+  const [success, setSuccess] = useState<{ templateId: number; designId: number | null } | null>(null);
 
   const logoInputRef = useRef<HTMLInputElement>(null);
 
@@ -226,8 +226,8 @@ function ReviewConfirmDialog({ open, result, filename, onClose, onImportSuccess 
         throw new Error(err.error ?? "Import failed");
       }
 
-      const data = await res.json() as { template: { id: number } };
-      setSuccess({ templateId: data.template.id });
+      const data = await res.json() as { template: { id: number }; design?: { id: number } | null };
+      setSuccess({ templateId: data.template.id, designId: data.design?.id ?? null });
       onImportSuccess(data.template.id);
       toast({ title: "Label imported successfully", description: `Template "${templateName}" created.` });
     } catch (err: unknown) {
@@ -255,17 +255,19 @@ function ReviewConfirmDialog({ open, result, filename, onClose, onImportSuccess 
               <h3 className="text-lg font-semibold mb-1">Label imported successfully</h3>
               <p className="text-muted-foreground text-sm">Template "{templateName}" is ready to use.</p>
             </div>
-            <div className="flex gap-3">
+            <div className="flex gap-3 flex-wrap justify-center">
               <Button asChild variant="default">
                 <Link href={`/zones`}>
                   <LayoutTemplate className="w-4 h-4 mr-2" /> View Zone Template
                 </Link>
               </Button>
-              <Button asChild variant="outline">
-                <Link href="/design-system">
-                  <ExternalLink className="w-4 h-4 mr-2" /> Branding Page
-                </Link>
-              </Button>
+              {success?.designId ? (
+                <Button asChild variant="outline">
+                  <Link href={`/designs/${success.designId}`}>
+                    <ExternalLink className="w-4 h-4 mr-2" /> Open Design File
+                  </Link>
+                </Button>
+              ) : null}
             </div>
             <Button variant="ghost" onClick={onClose}>Close</Button>
           </div>
@@ -359,7 +361,6 @@ function ReviewConfirmDialog({ open, result, filename, onClose, onImportSuccess 
                         <span className="flex-1 truncate text-muted-foreground text-xs">
                           {zone.text || <em className="opacity-50">no text</em>}
                         </span>
-                        <ColorSwatch color={zone.color} size="sm" />
                       </div>
                     ))}
                   </div>

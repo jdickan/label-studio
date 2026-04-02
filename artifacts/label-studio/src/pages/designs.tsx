@@ -603,7 +603,7 @@ function ObjectListPanel({
                 {obj.type === "text" ? "T" : obj.type === "rect" ? "□" : "○"}
               </span>
               <span className="flex-1 truncate">
-                {obj.type === "text" ? (obj as TextObj).content.slice(0, 20) || "(empty)" : obj.type === "rect" ? "Rectangle" : "Ellipse"}
+                {obj.type === "text" ? ((obj as TextObj).content ?? (obj as unknown as Record<string,string>).text ?? "").slice(0, 20) || "(empty)" : obj.type === "rect" ? "Rectangle" : "Ellipse"}
               </span>
               <button type="button" onClick={(e) => { e.stopPropagation(); onToggleVis(obj.id); }} className="opacity-0 group-hover:opacity-100 rounded p-0.5 hover:bg-muted-foreground/20" title={obj.visible ? "Hide" : "Show"}>
                 {obj.visible ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3 text-muted-foreground" />}

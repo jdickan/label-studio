@@ -557,20 +557,46 @@ router.post("/import", async (req, res) => {
     let design = null;
     if (isMasterTemplate && template) {
       try {
-        // Generate basic design objects from zones to populate the canvas
-        const designObjects = (zones ?? []).map((zone) => ({
-          id: randomUUID(),
-          type: zone.role === "photo-area" || zone.role === "logo-area" ? "image" : "text",
-          x: (zone.x ?? 0) * 100,    // Convert to percentage for canvas
-          y: (zone.y ?? 0) * 100,
-          width: (zone.w ?? 0.2) * 100,
-          height: (zone.h ?? 0.1) * 100,
-          text: zone.text || `[${zone.role.replace(/-/g, " ")}]`,
-          color: zone.color ?? "#000000",
-          fontSize: zone.fontSize ?? 12,
-          rotation: zone.rotation ?? 0,
-          role: zone.role,
-        }));
+        // Design editor uses 96 PPI pixel coordinates
+        const PPI = 96;
+        // Generate design objects from zones in the format the Designs editor expects
+        const designObjects = (zones ?? []).map((zone) => {
+          const isImage = zone.role === "photo-area" || zone.role === "logo-area";
+          const xPx = (zone.x ?? 0) * w * PPI;
+          const yPx = (zone.y ?? 0) * h * PPI;
+          const wPx = Math.max(10, (zone.w ?? 0.2) * w * PPI);
+          const hPx = Math.max(10, (zone.h ?? 0.1) * h * PPI);
+
+          if (isImage) {
+            // Render image/logo zones as filled rectangles
+            return {
+              id: randomUUID(),
+              type: "rect",
+              x: xPx, y: yPx, w: wPx, h: hPx,
+              locked: false, visible: true,
+              fill: "#e5e7eb",
+              stroke: "#9ca3af",
+              strokeWidth: 1,
+              borderRadius: 0,
+            };
+          }
+          // Text zone — match the TextObj interface exactly
+          return {
+            id: randomUUID(),
+            type: "text",
+            x: xPx, y: yPx, w: wPx, h: hPx,
+            locked: false, visible: true,
+            content: zone.text || `[${String(zone.role).replace(/-/g, " ")}]`,
+            fontFamily: "Arial",
+            fontSize: Math.max(6, Math.min(72, zone.fontSize ?? 12)),
+            bold: zone.role === "product-name" || zone.role === "brand-name",
+            italic: false,
+            underline: false,
+            align: (["left", "center", "right"].includes(zone.textAlign ?? "") ? zone.textAlign : "left") as "left" | "center" | "right",
+            letterSpacing: 0,
+            color: "#000000",
+          };
+        });
 
         const [newDesign] = await db.insert(labelDesignsTable).values({
           name: templateName,
