@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef } from "react";
+import PageWrapper from "@/components/layout/page-wrapper";
 import { 
   useGetProducts, 
   useCreateProduct, 
@@ -275,12 +276,9 @@ export default function Products() {
   };
 
   return (
+    <PageWrapper>
     <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Products</h1>
-          <p className="text-muted-foreground mt-1">Manage your catalog and formula details.</p>
-        </div>
+      <div className="flex flex-col sm:flex-row justify-end items-start sm:items-center gap-4">
         <div className="flex items-center gap-2">
           <input
             ref={csvInputRef}
@@ -526,5 +524,6 @@ export default function Products() {
         </SheetContent>
       </Sheet>
     </div>
+    </PageWrapper>
   );
 }

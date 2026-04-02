@@ -1356,13 +1356,9 @@ export default function Zones() {
   }, [activeTemplateId, toast, queryClient]);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-120px)] animate-in fade-in duration-500">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-4 shrink-0">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight kern-on">Zones</h1>
-          <p className="text-muted-foreground mt-1">Block out zone layouts, assign data hooks, and link label sheets.</p>
-        </div>
+    <div className="flex flex-col h-full animate-in fade-in duration-500">
+      {/* Action bar */}
+      <div className="flex justify-end items-center px-4 py-2 border-b bg-card shrink-0">
         <div className="flex gap-2">
           {isEditing && (
             <>

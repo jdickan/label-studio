@@ -1,5 +1,6 @@
 import { useGetDashboardStats, useGetRecentPrintJobs, useGetProductsByType, getGetDashboardStatsQueryKey, getGetRecentPrintJobsQueryKey, getGetProductsByTypeQueryKey } from "@workspace/api-client-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import PageWrapper from "@/components/layout/page-wrapper";
 import { Layers, Package, Printer, FileText, Droplets, Flame, Wind, LayoutTemplate } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "wouter";
@@ -33,11 +34,8 @@ export default function Dashboard() {
   };
 
   return (
+    <PageWrapper>
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Overview</h1>
-        <p className="text-muted-foreground mt-1">Here's what's happening in your print shop today.</p>
-      </div>
 
       {isStatsLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -195,5 +193,6 @@ export default function Dashboard() {
         </div>
       </div>
     </div>
+    </PageWrapper>
   );
 }

@@ -1,22 +1,45 @@
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { useState, ReactNode } from "react";
+import { useLocation } from "wouter";
+import { ShellContext } from "@/context/shell-context";
 import AppSidebar from "./app-sidebar";
 
-export default function Shell({ children }: { children: React.ReactNode }) {
+const PAGE_TITLES: Record<string, string> = {
+  "/": "Dashboard",
+  "/dashboard": "Dashboard",
+  "/products": "Products",
+  "/label-sheets": "Sheets",
+  "/zones": "Zones",
+  "/designs": "Designs",
+  "/print-jobs": "Print Jobs",
+  "/design-system": "Branding",
+};
+
+export default function Shell({ children }: { children: ReactNode }) {
+  const [topBarState, setTopBarState] = useState<{ title?: string; actions?: ReactNode }>({});
+  const [location] = useLocation();
+
+  const pageTitle = topBarState.title ?? PAGE_TITLES[location] ?? "";
+
   return (
-    <SidebarProvider>
-      <div className="flex min-h-screen w-full bg-secondary/30">
+    <ShellContext.Provider value={{ topBarState, setTopBarState }}>
+      <div className="flex h-screen overflow-hidden bg-secondary/30">
         <AppSidebar />
-        <div className="flex flex-col flex-1 w-full overflow-hidden">
-          <header className="h-14 border-b bg-card flex items-center px-4 shrink-0 shadow-sm sticky top-0 z-10">
-            <SidebarTrigger className="-ml-2 mr-2" />
+        <div className="flex flex-col flex-1 min-w-0">
+          <header className="h-11 border-b bg-card flex items-center px-4 shrink-0 shadow-sm z-10">
+            <span className="font-semibold text-sm tracking-tight text-foreground">
+              {pageTitle}
+            </span>
+            {topBarState.actions && (
+              <div className="ml-auto flex items-center gap-2">
+                {topBarState.actions}
+              </div>
+            )}
           </header>
-          <main className="flex-1 overflow-auto p-6 md:p-8">
-            <div className="max-w-6xl mx-auto w-full">
-              {children}
-            </div>
+          <main className="flex-1 overflow-hidden">
+            {children}
           </main>
         </div>
       </div>
-    </SidebarProvider>
+    </ShellContext.Provider>
   );
 }

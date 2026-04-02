@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import PageWrapper from "@/components/layout/page-wrapper";
 import { 
   useGetDesignSystem, 
   useUpdateDesignSystem,
@@ -264,12 +265,8 @@ export default function DesignSystem() {
   if (isLoading) return <div className="p-8 text-center animate-pulse">Loading settings...</div>;
 
   return (
+    <PageWrapper>
     <div className="space-y-8 animate-in fade-in duration-500">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight kern-on">Brand Settings</h1>
-        <p className="text-muted-foreground mt-1">Configure global styling and brand details for your labels.</p>
-      </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -452,5 +449,6 @@ export default function DesignSystem() {
 
       <KerningSpecimen />
     </div>
+    </PageWrapper>
   );
 }

@@ -162,6 +162,17 @@ Every package extends `tsconfig.base.json`. Three library packages (`lib/db`, `l
 - `pnpm --filter @workspace/db run push` — push Drizzle schema to DB
 - `pnpm --filter @workspace/scripts run seed` — seed the database
 
+## Shell & Layout Architecture (UX Overhaul)
+
+- **Custom icon sidebar** (`app-sidebar.tsx`): 56px wide, icon-only at rest; hovering a nav item reveals a flyout tooltip label to the right (CSS `group-hover/nav` + absolute positioned popover). No hamburger/toggle button.
+- **Nav order**: Dashboard → Print Jobs → Products → Zones → Designs → Sheets → Branding
+- **Branding** is in the main nav (previously called "Brand Settings" in a footer)
+- **ShellContext** (`src/context/shell-context.tsx`): pages inject `{ title, actions }` into the topbar via `useShell()` + `useEffect`. Shell reads `topBarState` to render the title and right-side action slot.
+- **Shell main**: `overflow-hidden` — no padding; pages manage their own layout.
+- **PageWrapper** (`src/components/layout/page-wrapper.tsx`): standard scrollable padded layout for all regular pages (Dashboard, Products, Sheets, Print Jobs, Branding). Use `<PageWrapper>` as the root return element.
+- **Designs page**: full-bleed editor layout — left panel (`w-52 border-r overflow-y-auto`) and right panel (`w-52 border-l overflow-y-auto`) dock flush to edges; canvas fills center. Save button + sheet selector injected into topbar via ShellContext. Empty state replaces always-on header.
+- **Zones page**: full-bleed split panel (`h-full`), with a compact action bar at top (border-b, px-4 py-2). Uses `h-full`, not `h-[calc(100vh-Npx)]`.
+
 ## Important Conventions
 
 - **API import paths**: always use `@workspace/db` (not `@workspace/db/schema`) for `db` and table exports

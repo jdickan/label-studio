@@ -1,4 +1,5 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import { useShell } from "@/context/shell-context";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useGetLabelDesigns,
@@ -957,6 +958,7 @@ function DesignCanvas({
 export default function Designs() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { setTopBarState } = useShell();
 
   const { data: allDesigns = [], isLoading } = useGetLabelDesigns({ query: { queryKey: getGetLabelDesignsQueryKey() } });
   const { data: sheets = [] } = useGetLabelSheets({ query: { queryKey: getGetLabelSheetsQueryKey() } });
@@ -1079,28 +1081,35 @@ export default function Designs() {
 
   const zoomPct = Math.round(zoom * 100);
 
-  return (
-    <div className="flex flex-col h-[calc(100vh-120px)] animate-in fade-in duration-500">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-4 shrink-0">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight kern-on">Designs</h1>
-          <p className="text-muted-foreground mt-1">WYSIWYG visual label designer — typography, colours, shapes.</p>
-        </div>
-        <div className="flex gap-2 items-center">
-          {activeDesignId && (
-            <Button onClick={handleSave} disabled={isSaving || !isDirty} size="sm">
-              <Save className="w-4 h-4 mr-1" />
-              {isSaving ? "Saving…" : "Save"}
-            </Button>
-          )}
-        </div>
+  useEffect(() => {
+    const title = activeDesign ? activeDesign.name : "Designs";
+    const actions = activeDesignId ? (
+      <div className="flex items-center gap-2">
+        <Select value={selectedSheetId} onValueChange={handleSheetChange}>
+          <SelectTrigger className="h-7 text-xs w-40">
+            <SelectValue placeholder="No sheet" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">No sheet</SelectItem>
+            {sheets.map((s) => (
+              <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button onClick={handleSave} disabled={isSaving || !isDirty} size="sm" variant={isDirty ? "default" : "ghost"} className="h-7 text-xs px-3">
+          <Save className="w-3.5 h-3.5 mr-1" />
+          {isSaving ? "Saving…" : isDirty ? "Save" : "Saved"}
+        </Button>
       </div>
+    ) : undefined;
+    setTopBarState({ title, actions });
+    return () => setTopBarState({});
+  }, [activeDesign, activeDesignId, isDirty, isSaving, selectedSheetId, sheets]);
 
-      {/* 3-panel layout */}
-      <div className="flex flex-1 gap-3 min-h-0">
-        {/* Left panel */}
-        <div className="w-52 shrink-0 flex flex-col gap-2 overflow-y-auto">
+  return (
+    <div className="flex h-full overflow-hidden">
+      {/* Left panel — docked to left edge */}
+      <div className="w-52 flex-shrink-0 border-r bg-card flex flex-col overflow-y-auto">
           {isLoading ? (
             <p className="text-xs text-muted-foreground text-center py-4 animate-pulse">Loading…</p>
           ) : (
@@ -1128,8 +1137,8 @@ export default function Designs() {
           )}
         </div>
 
-        {/* Center canvas area */}
-        <div className="flex-1 min-h-0 flex flex-col overflow-hidden rounded-lg border bg-card">
+        {/* Center canvas area — fills remaining space, edge-to-edge */}
+        <div className="flex-1 min-w-0 flex flex-col overflow-hidden bg-card">
           {!activeDesignId ? (
             <div className="flex-1 flex items-center justify-center">
               <div className="text-center flex flex-col items-center gap-4 max-w-xs">
@@ -1209,8 +1218,8 @@ export default function Designs() {
           )}
         </div>
 
-        {/* Right panel */}
-        <div className="w-52 shrink-0 flex flex-col gap-2 overflow-y-auto">
+        {/* Right panel — docked to right edge */}
+        <div className="w-52 flex-shrink-0 border-l bg-card flex flex-col overflow-y-auto">
           {selectedObj && (
             <PropertiesPanel obj={selectedObj} onUpdate={updateObj} extraFonts={extraFonts} />
           )}
@@ -1225,7 +1234,6 @@ export default function Designs() {
             />
           )}
         </div>
-      </div>
     </div>
   );
 }

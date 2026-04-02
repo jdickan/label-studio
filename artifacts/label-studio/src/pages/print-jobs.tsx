@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useCallback } from "react";
+import PageWrapper from "@/components/layout/page-wrapper";
 import { 
   useGetPrintJobs, 
   useCreatePrintJob, 
@@ -834,12 +835,9 @@ export default function PrintJobs() {
   }, [usableSlotsPerSheet, totalLabelsInForm]);
 
   return (
+    <PageWrapper>
     <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="flex justify-between items-center print:hidden">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Print Jobs</h1>
-          <p className="text-muted-foreground mt-1">Batch products and generate print-ready sheets.</p>
-        </div>
+      <div className="flex justify-end items-center print:hidden">
         <Button onClick={openCreate} data-testid="button-create-job">
           <Plus className="w-4 h-4 mr-2" />
           New Print Job
@@ -1142,5 +1140,6 @@ export default function PrintJobs() {
         </DialogContent>
       </Dialog>
     </div>
+    </PageWrapper>
   );
 }

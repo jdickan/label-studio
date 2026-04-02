@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from "react";
+import PageWrapper from "@/components/layout/page-wrapper";
 import { 
   useGetLabelSheets, 
   useCreateLabelSheet, 
@@ -890,12 +891,9 @@ export default function LabelSheets() {
   };
 
   return (
+    <PageWrapper>
     <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Sheets</h1>
-          <p className="text-muted-foreground mt-1">Manage physical paper dimensions and templates.</p>
-        </div>
+      <div className="flex justify-end items-center">
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setIsPdfUploadOpen(true)}>
             <Upload className="w-4 h-4 mr-2" />
@@ -1236,5 +1234,6 @@ export default function LabelSheets() {
         </DialogContent>
       </Dialog>
     </div>
+    </PageWrapper>
   );
 }
