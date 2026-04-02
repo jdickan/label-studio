@@ -166,12 +166,23 @@ Analyze the uploaded label image and return a JSON object with ALL of these fiel
   "dominantColors": string[]  // array of 2-5 hex colors extracted from the label palette
 }
 
-Rules:
+Rules for zone detection:
 - Always include a "product-name" zone — it is required
 - x, y, w, h MUST be 0.0–1.0 fractions
-- Identify ALL distinct zones (typically 5-12)
-- Only mark zones as "photo-area" or "logo-area" if they contain actual images or graphics (not blank space or placeholder text)
-- For text zones, estimate rotation: 0° for horizontal, 90° for clockwise vertical, -90° for counter-clockwise vertical
+- Identify ALL distinct content zones with visible TEXT or IMAGE content (typically 5-10)
+- ONLY create zones for FUNCTIONAL content areas (brand names, product names, descriptions, ingredients, disclaimers, images, logos)
+- DO NOT create zones for purely decorative visual elements like:
+  * Background textures, patterns, or fills (diagonal stripes, gradients, decorative borders)
+  * Dividing lines or decorative separators
+  * Visual ornaments or flourishes that don't contain information
+- Mark zones as "photo-area" or "logo-area" ONLY if they contain actual images, photos, or brand logo graphics
+  * Never create "logo-area" zones that are actually rotated text — keep as text zone with rotation instead
+- For angled/vertical text zones, estimate rotation accurately:
+  * 0° = horizontal text (left-to-right)
+  * 90° = text rotated 90° clockwise (reads bottom-to-top when rotated)
+  * -90° = text rotated 90° counter-clockwise (reads top-to-bottom when rotated)
+  * Preserve rotation for disclaimer/warning text on edges
+- If text and image content overlap in the same area, create separate zones — prefer text zones over image zones when unsure
 - Return ONLY the JSON object, no markdown, no explanation, no code fences`;
 
 async function runAnalysis(jobId: string, filename: string, buffer: Buffer, mimeType: string) {
@@ -546,11 +557,26 @@ router.post("/import", async (req, res) => {
     let design = null;
     if (isMasterTemplate && template) {
       try {
+        // Generate basic design objects from zones to populate the canvas
+        const designObjects = (zones ?? []).map((zone) => ({
+          id: randomUUID(),
+          type: zone.role === "photo-area" || zone.role === "logo-area" ? "image" : "text",
+          x: (zone.x ?? 0) * 100,    // Convert to percentage for canvas
+          y: (zone.y ?? 0) * 100,
+          width: (zone.w ?? 0.2) * 100,
+          height: (zone.h ?? 0.1) * 100,
+          text: zone.text || `[${zone.role.replace(/-/g, " ")}]`,
+          color: zone.color ?? "#000000",
+          fontSize: zone.fontSize ?? 12,
+          rotation: zone.rotation ?? 0,
+          role: zone.role,
+        }));
+
         const [newDesign] = await db.insert(labelDesignsTable).values({
           name: templateName,
           description: `Master Design — ${productType ?? "unknown"} label, ${w}" × ${h}"`,
           labelSheetId: labelSheetId ?? null,
-          objects: [], // Empty canvas; user can add design elements later
+          objects: designObjects,
         }).returning();
         design = newDesign;
       } catch {
