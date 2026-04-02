@@ -472,3 +472,27 @@ export type GetProductsParams = {
   productType?: string;
   search?: string;
 };
+
+export interface LabelDesign {
+  id: number;
+  name: string;
+  description?: string | null;
+  labelSheetId?: number | null;
+  objects: unknown[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateLabelDesignBody {
+  name: string;
+  description?: string;
+  labelSheetId?: number | null;
+  objects?: unknown[];
+}
+
+export interface UpdateLabelDesignBody {
+  name?: string;
+  description?: string;
+  labelSheetId?: number | null;
+  objects?: unknown[];
+}

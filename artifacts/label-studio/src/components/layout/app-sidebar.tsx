@@ -11,7 +11,7 @@ import {
   SidebarMenuButton,
   SidebarFooter
 } from "@/components/ui/sidebar";
-import { Layers, LayoutTemplate, Printer, Palette, Home, Droplets } from "lucide-react";
+import { Layers, LayoutTemplate, Printer, Palette, Home, Droplets, Sparkles } from "lucide-react";
 import ravenLogo from "/raven-logo.webp";
 
 export default function AppSidebar() {
@@ -22,6 +22,7 @@ export default function AppSidebar() {
     { name: "Print Jobs", href: "/print-jobs",        icon: Printer        },
     { name: "Products",   href: "/products",          icon: Droplets       },
     { name: "Zones",      href: "/zones",              icon: LayoutTemplate },
+    { name: "Designs",    href: "/designs",            icon: Sparkles       },
     { name: "Sheets",     href: "/label-sheets",      icon: Layers         },
   ];
 

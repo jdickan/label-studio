@@ -18,6 +18,7 @@ import type {
 
 import type {
   AnalyzeLabelTemplateBody,
+  CreateLabelDesignBody,
   CreateLabelSheetBody,
   CreateLabelTemplateBody,
   CreatePrintJobBody,
@@ -27,6 +28,7 @@ import type {
   ErrorResponse,
   GetProductsParams,
   HealthStatus,
+  LabelDesign,
   LabelSheet,
   LabelTemplate,
   LabelZoneAnalysisResult,
@@ -34,6 +36,7 @@ import type {
   Product,
   ProductTypeCount,
   UpdateDesignSystemBody,
+  UpdateLabelDesignBody,
   UpdateLabelSheetBody,
   UpdateLabelTemplateBody,
   UpdatePrintJobBody,
@@ -2293,3 +2296,138 @@ export function useGetProductsByType<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+// ── Label Designs ─────────────────────────────────────────────────────────────
+
+export const getGetLabelDesignsUrl = () => `/api/label-designs`;
+
+export const getLabelDesigns = async (options?: RequestInit): Promise<LabelDesign[]> =>
+  customFetch<LabelDesign[]>(getGetLabelDesignsUrl(), { ...options, method: "GET" });
+
+export const getGetLabelDesignsQueryKey = () => [`/api/label-designs`] as const;
+
+export const getGetLabelDesignsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getLabelDesigns>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<Awaited<ReturnType<typeof getLabelDesigns>>, TError, TData>;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getGetLabelDesignsQueryKey();
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getLabelDesigns>>> = ({ signal }) =>
+    getLabelDesigns({ signal, ...requestOptions });
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getLabelDesigns>>, TError, TData
+  > & { queryKey: QueryKey };
+};
+
+export function useGetLabelDesigns<
+  TData = Awaited<ReturnType<typeof getLabelDesigns>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<Awaited<ReturnType<typeof getLabelDesigns>>, TError, TData>;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetLabelDesignsQueryOptions(options);
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export const getCreateLabelDesignUrl = () => `/api/label-designs`;
+
+export const createLabelDesign = async (
+  body: CreateLabelDesignBody,
+  options?: RequestInit,
+): Promise<LabelDesign> =>
+  customFetch<LabelDesign>(getCreateLabelDesignUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(body),
+  });
+
+export const useCreateLabelDesign = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createLabelDesign>>,
+    TError,
+    { data: CreateLabelDesignBody },
+    TContext
+  >;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createLabelDesign>>,
+  TError,
+  { data: CreateLabelDesignBody },
+  TContext
+> =>
+  useMutation({
+    mutationKey: ["createLabelDesign"],
+    mutationFn: (props) => createLabelDesign(props.data),
+    ...options?.mutation,
+  });
+
+export const getUpdateLabelDesignUrl = (id: number) => `/api/label-designs/${id}`;
+
+export const updateLabelDesign = async (
+  id: number,
+  body: UpdateLabelDesignBody,
+  options?: RequestInit,
+): Promise<LabelDesign> =>
+  customFetch<LabelDesign>(getUpdateLabelDesignUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(body),
+  });
+
+export const useUpdateLabelDesign = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateLabelDesign>>,
+    TError,
+    { id: number; data: UpdateLabelDesignBody },
+    TContext
+  >;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateLabelDesign>>,
+  TError,
+  { id: number; data: UpdateLabelDesignBody },
+  TContext
+> =>
+  useMutation({
+    mutationKey: ["updateLabelDesign"],
+    mutationFn: (props) => updateLabelDesign(props.id, props.data),
+    ...options?.mutation,
+  });
+
+export const getDeleteLabelDesignUrl = (id: number) => `/api/label-designs/${id}`;
+
+export const deleteLabelDesign = async (id: number, options?: RequestInit): Promise<void> =>
+  customFetch<void>(getDeleteLabelDesignUrl(id), { ...options, method: "DELETE" });
+
+export const useDeleteLabelDesign = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteLabelDesign>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteLabelDesign>>,
+  TError,
+  { id: number },
+  TContext
+> =>
+  useMutation({
+    mutationKey: ["deleteLabelDesign"],
+    mutationFn: (props) => deleteLabelDesign(props.id),
+    ...options?.mutation,
+  });

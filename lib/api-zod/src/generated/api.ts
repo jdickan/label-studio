@@ -82,6 +82,19 @@ export const CreatePrintJobBody = z.object({
 
 export const UpdatePrintJobBody = CreatePrintJobBody.partial();
 
+export const GetLabelDesignParams = idParam;
+export const UpdateLabelDesignParams = idParam;
+export const DeleteLabelDesignParams = idParam;
+
+export const CreateLabelDesignBody = z.object({
+  name: z.string(),
+  description: z.string().optional(),
+  labelSheetId: z.number().nullable().optional(),
+  objects: z.array(z.any()).optional(),
+}).passthrough();
+
+export const UpdateLabelDesignBody = CreateLabelDesignBody.partial();
+
 export const UpdateDesignSystemBody = z.object({
   primaryFont: z.string().optional(),
   secondaryFont: z.string().optional(),

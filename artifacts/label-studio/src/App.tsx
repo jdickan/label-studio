@@ -10,6 +10,7 @@ import Dashboard from "@/pages/dashboard";
 import Products from "@/pages/products";
 import LabelSheets from "@/pages/label-sheets";
 import Zones from "@/pages/zones";
+import Designs from "@/pages/designs";
 import PrintJobs from "@/pages/print-jobs";
 import DesignSystem from "@/pages/design-system";
 import { getGetDesignSystemQueryKey, getDesignSystem } from "@workspace/api-client-react";
@@ -58,6 +59,7 @@ function Router() {
         <Route path="/label-sheets" component={LabelSheets} />
         <Route path="/zones" component={Zones} />
         <Route path="/label-templates"><Redirect to="/zones" /></Route>
+        <Route path="/designs" component={Designs} />
         <Route path="/print-jobs" component={PrintJobs} />
         <Route path="/design-system" component={DesignSystem} />
         <Route component={NotFound} />
