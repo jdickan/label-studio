@@ -655,6 +655,8 @@ function DesignCanvas({
   labelH,
   bleedInches,
   safeInches,
+  labelShape,
+  cornerRadius,
   onSelect,
   onUpdateObj,
   onStartEdit,
@@ -667,6 +669,8 @@ function DesignCanvas({
   labelH: number;
   bleedInches: number;
   safeInches: number;
+  labelShape: "rectangle" | "circle" | "oval";
+  cornerRadius: number;
   onSelect: (id: string | null) => void;
   onUpdateObj: (id: string, patch: Partial<DesignObj>) => void;
   onStartEdit: (id: string) => void;
@@ -744,7 +748,7 @@ function DesignCanvas({
       if (handle.includes("r")) { w = Math.max(MIN_SIZE, drag.origW + dx); }
       if (handle.includes("l")) { const nw = Math.max(MIN_SIZE, drag.origW - dx); x = drag.origX + drag.origW - nw; w = nw; }
       if (handle.includes("b")) { h = Math.max(MIN_SIZE, drag.origH + dy); }
-      if (handle.includes("t") && handle !== "type") { const nh = Math.max(MIN_SIZE, drag.origH - dy); y = drag.origY + drag.origH - nh; h = nh; }
+      if (handle.includes("t")) { const nh = Math.max(MIN_SIZE, drag.origH - dy); y = drag.origY + drag.origH - nh; h = nh; }
       onUpdateObj(drag.objId, { x, y, w, h } as Partial<DesignObj>);
     }
   }
@@ -764,10 +768,26 @@ function DesignCanvas({
     l:  { top: 0.5, left: 0, cursor: "w-resize" },
   };
 
+  const dieCutRadius =
+    labelShape === "circle" || labelShape === "oval"
+      ? "50%"
+      : cornerRadius > 0
+      ? `${px(cornerRadius / 72, zoom)}px`
+      : 0;
+
   return (
     <div
       ref={canvasRef}
-      style={{ width: cW, height: cH, position: "relative", background: "white", boxShadow: "0 4px 24px rgba(0,0,0,0.18)", flexShrink: 0 }}
+      style={{
+        width: cW,
+        height: cH,
+        position: "relative",
+        background: "white",
+        boxShadow: "0 4px 24px rgba(0,0,0,0.18)",
+        flexShrink: 0,
+        borderRadius: dieCutRadius,
+        overflow: "hidden",
+      }}
       onPointerDown={onCanvasPointerDown}
       onPointerMove={onCanvasPointerMove}
       onPointerUp={onCanvasPointerUp}
@@ -977,9 +997,10 @@ export default function Designs() {
     setIsDirty(true);
   }
 
-  function addObj(obj: DesignObj) {
+  function addObj(obj: DesignObj, startEditing = false) {
     setObjects((prev) => [...prev, obj]);
     setSelectedId(obj.id);
+    if (startEditing) setEditingId(obj.id);
     setIsDirty(true);
   }
 
@@ -1091,7 +1112,7 @@ export default function Designs() {
             <ToolPanel
               activeTab={activeTab}
               onTab={setActiveTab}
-              onAddText={() => addObj(makeText(undefined, designSystem))}
+              onAddText={() => addObj(makeText(undefined, designSystem), true)}
               onAddRect={() => addObj(makeRect())}
               onAddEllipse={() => addObj(makeEllipse())}
               sheets={sheets}
@@ -1134,6 +1155,8 @@ export default function Designs() {
                     labelH={labelH}
                     bleedInches={bleedInches}
                     safeInches={safeInches}
+                    labelShape={(activeSheet?.shape ?? "rectangle") as "rectangle" | "circle" | "oval"}
+                    cornerRadius={activeSheet?.cornerRadius ?? 0}
                     onSelect={setSelectedId}
                     onUpdateObj={updateObj}
                     onStartEdit={setEditingId}
@@ -1143,13 +1166,29 @@ export default function Designs() {
               </div>
 
               {/* Status bar */}
-              <div className="h-8 border-t bg-card flex items-center px-3 gap-4 text-xs text-muted-foreground shrink-0">
+              <div className="h-8 border-t bg-card flex items-center px-3 gap-2 text-xs text-muted-foreground shrink-0">
                 {selectedObj ? (
                   <>
-                    <span>X: <b className="text-foreground">{fmt3(selectedObj.x)}″</b></span>
-                    <span>Y: <b className="text-foreground">{fmt3(selectedObj.y)}″</b></span>
-                    <span>W: <b className="text-foreground">{fmt3(selectedObj.w)}″</b></span>
-                    <span>H: <b className="text-foreground">{fmt3(selectedObj.h)}″</b></span>
+                    {(["x","y","w","h"] as const).map((field) => (
+                      <label key={field} className="flex items-center gap-1">
+                        <span className="uppercase">{field}:</span>
+                        <input
+                          type="number"
+                          step="0.001"
+                          min={field === "w" || field === "h" ? MIN_SIZE : undefined}
+                          value={fmt3(selectedObj[field])}
+                          onChange={(e) => {
+                            const v = parseFloat(e.target.value);
+                            if (!isNaN(v)) {
+                              const min = field === "w" || field === "h" ? MIN_SIZE : -99;
+                              updateObj(selectedObj.id, { [field]: Math.max(min, v) } as Partial<DesignObj>);
+                            }
+                          }}
+                          className="w-14 text-foreground font-medium bg-transparent border-b border-muted-foreground/40 focus:outline-none focus:border-primary text-xs py-0 text-center"
+                        />
+                        <span>″</span>
+                      </label>
+                    ))}
                   </>
                 ) : (
                   <span>{labelW}″ × {labelH}″ label</span>
