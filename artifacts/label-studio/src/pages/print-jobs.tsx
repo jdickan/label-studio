@@ -553,42 +553,219 @@ export default function PrintJobs() {
     }
   };
 
-  const captureSheetImages = useCallback(async (): Promise<string[]> => {
-    const { default: html2canvas } = await import("html2canvas");
-    const sheetEls = previewRef.current?.querySelectorAll<HTMLElement>("[data-sheet-page]");
-    if (!sheetEls || sheetEls.length === 0) return [];
+  const drawSheetToCanvas = useCallback(async (
+    slots: GangedSlot[],
+    sheet: LabelSheetType,
+    templateZones: LabelZone[] | null,
+    templateBgColor: string | null,
+  ): Promise<HTMLCanvasElement> => {
+    const DPI = 150;
+    const px = (inches: number) => Math.round(inches * DPI);
+    const canvas = document.createElement("canvas");
+    canvas.width = px(sheet.pageWidth);
+    canvas.height = px(sheet.pageHeight);
+    const ctx = canvas.getContext("2d")!;
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    const images: string[] = [];
-    for (const el of Array.from(sheetEls)) {
-      try {
-        const canvas = await html2canvas(el, {
-          scale: 2,
-          useCORS: true,
-          backgroundColor: "#ffffff",
-          logging: false,
-          allowTaint: true,
-        });
-        images.push(canvas.toDataURL("image/png"));
-      } catch (err) {
-        console.warn("html2canvas error, falling back to simple render:", err);
-        const w = parseInt(el.style.width) * 96 * 2;
-        const h = parseInt(el.style.height) * 96 * 2;
-        const fallbackCanvas = document.createElement("canvas");
-        fallbackCanvas.width = w;
-        fallbackCanvas.height = h;
-        const ctx = fallbackCanvas.getContext("2d");
-        if (ctx) {
-          ctx.fillStyle = "#ffffff";
-          ctx.fillRect(0, 0, w, h);
-          ctx.fillStyle = "#999";
-          ctx.font = "20px sans-serif";
-          ctx.fillText("Unable to render PDF", 20, 30);
+    const topPad = px(sheet.topMargin);
+    const leftPad = px(sheet.leftMargin);
+    const labelW = px(sheet.labelWidth);
+    const labelH = px(sheet.labelHeight);
+    const colGap = px(sheet.horizontalGap || 0);
+    const rowGap = px(sheet.verticalGap || 0);
+    const HEADING_CANVAS = new Set(["brand", "productName", "brand-name", "product-name", "productType", "scentFamily"]);
+
+    const fontSizeForZone = (zone: LabelZone) =>
+      Math.max(9, (zone.fontSize || 12) * sheet.labelHeight * DPI / 260);
+
+    const loadImage = (src: string): Promise<HTMLImageElement | null> =>
+      new Promise(resolve => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => resolve(null);
+        img.src = src;
+      });
+
+    const imageCache: Record<string, HTMLImageElement | null> = {};
+    if (templateZones) {
+      await Promise.all(
+        templateZones
+          .filter(z => z.imageUrl)
+          .map(async z => { imageCache[z.id] = await loadImage(z.imageUrl!); })
+      );
+    }
+
+    const wrapText = (text: string, maxWidth: number, fontSize: number): string[] => {
+      ctx.font = `${fontSize}px sans-serif`;
+      const words = text.split(" ");
+      const lines: string[] = [];
+      let current = "";
+      for (const word of words) {
+        const test = current ? `${current} ${word}` : word;
+        if (ctx.measureText(test).width <= maxWidth || !current) {
+          current = test;
+        } else {
+          lines.push(current);
+          current = word;
         }
-        images.push(fallbackCanvas.toDataURL("image/png"));
+      }
+      if (current) lines.push(current);
+      return lines;
+    };
+
+    for (let i = 0; i < slots.length; i++) {
+      const slot = slots[i];
+      const col = i % sheet.labelsAcross;
+      const row = Math.floor(i / sheet.labelsAcross);
+      const x = leftPad + col * (labelW + colGap);
+      const y = topPad + row * (labelH + rowGap);
+
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(x, y, labelW, labelH);
+
+      if (slot.type === "blank" && slot.isIntentionalBlank) {
+        ctx.save();
+        ctx.setLineDash([4, 4]);
+        ctx.strokeStyle = "#f97316";
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(x + 1, y + 1, labelW - 2, labelH - 2);
+        ctx.fillStyle = "rgba(251,146,60,0.08)";
+        ctx.fillRect(x, y, labelW, labelH);
+        ctx.restore();
+        ctx.fillStyle = "#f97316";
+        ctx.font = `bold ${Math.round(DPI * 0.07)}px sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("BLANK", x + labelW / 2, y + labelH / 2);
+      } else if (slot.type === "blank") {
+        ctx.save();
+        ctx.setLineDash([2, 3]);
+        ctx.strokeStyle = "#d1d5db";
+        ctx.lineWidth = 0.5;
+        ctx.strokeRect(x, y, labelW, labelH);
+        ctx.restore();
+      } else if (templateZones && templateZones.length > 0) {
+        if (templateBgColor && templateBgColor !== "transparent") {
+          ctx.fillStyle = templateBgColor;
+          ctx.fillRect(x, y, labelW, labelH);
+        }
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(x, y, labelW, labelH);
+        ctx.clip();
+
+        for (const zone of templateZones) {
+          const zx = x + zone.x * labelW;
+          const zy = y + zone.y * labelH;
+          const zw = zone.w * labelW;
+          const zh = zone.h * labelH;
+          const isTransparent = !zone.color || zone.color === "transparent";
+          const isImage = zone.role === "photo-area" || zone.role === "logo-area";
+          const fontSize = fontSizeForZone(zone);
+          const pad = Math.max(3, 6 * (DPI / 96));
+          const fontWeight = HEADING_CANVAS.has(zone.role) ? "bold" : "normal";
+          const autoFg = isTransparent || isLightColor(zone.color || "") ? "#1a1a1a" : "#ffffff";
+          const fg = zone.textColor || autoFg;
+
+          if (zone.rotation) {
+            ctx.save();
+            ctx.translate(zx + zw / 2, zy + zh / 2);
+            ctx.rotate((zone.rotation * Math.PI) / 180);
+            if (!isTransparent) {
+              ctx.fillStyle = zone.color;
+              ctx.fillRect(-zw / 2, -zh / 2, zw, zh);
+            }
+            if (isImage && imageCache[zone.id]) {
+              ctx.drawImage(imageCache[zone.id]!, -zw / 2, -zh / 2, zw, zh);
+            } else if (!isImage) {
+              const text = resolveZoneText(zone, slot);
+              if (text) {
+                ctx.fillStyle = fg;
+                ctx.font = `${fontWeight} ${fontSize}px sans-serif`;
+                ctx.textAlign = zone.textAlign || "left";
+                ctx.textBaseline = "top";
+                const lines = wrapText(text, zw - pad * 2, fontSize);
+                const lh = fontSize * 1.2;
+                const totalH = lines.length * lh;
+                const textAlignY = (zone as LabelZone & { textAlignY?: string }).textAlignY;
+                let sy = -zh / 2 + pad;
+                if (textAlignY === "middle") sy = -totalH / 2;
+                else if (textAlignY === "bottom") sy = zh / 2 - totalH - pad;
+                const lx = zone.textAlign === "center" ? 0 : zone.textAlign === "right" ? zw / 2 - pad : -zw / 2 + pad;
+                lines.forEach((line, li) => ctx.fillText(line, lx, sy + li * lh));
+              }
+            }
+            ctx.restore();
+          } else {
+            if (!isTransparent) {
+              ctx.fillStyle = zone.color;
+              ctx.fillRect(zx, zy, zw, zh);
+            }
+            if (isImage && imageCache[zone.id]) {
+              ctx.drawImage(imageCache[zone.id]!, zx, zy, zw, zh);
+            } else if (!isImage) {
+              const text = resolveZoneText(zone, slot);
+              if (text) {
+                ctx.fillStyle = fg;
+                ctx.font = `${fontWeight} ${fontSize}px sans-serif`;
+                ctx.textAlign = zone.textAlign || "left";
+                ctx.textBaseline = "top";
+                const lines = wrapText(text, zw - pad * 2, fontSize);
+                const lh = fontSize * 1.2;
+                const totalH = lines.length * lh;
+                const textAlignY = (zone as LabelZone & { textAlignY?: string }).textAlignY;
+                let sy = zy + pad;
+                if (textAlignY === "middle") sy = zy + (zh - totalH) / 2;
+                else if (textAlignY === "bottom") sy = zy + zh - totalH - pad;
+                const lx = zone.textAlign === "center" ? zx + zw / 2 : zone.textAlign === "right" ? zx + zw - pad : zx + pad;
+                lines.forEach((line, li) => ctx.fillText(line, lx, sy + li * lh));
+              }
+            }
+          }
+        }
+        ctx.restore();
+      } else {
+        ctx.strokeStyle = "#d1d5db";
+        ctx.lineWidth = 0.5;
+        ctx.setLineDash([]);
+        ctx.strokeRect(x + 0.25, y + 0.25, labelW - 0.5, labelH - 0.5);
+        const pad = px(0.05);
+        const cx = x + labelW / 2;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "alphabetic";
+        if (slot.productName) {
+          ctx.fillStyle = "#111827";
+          ctx.font = `bold ${px(0.09)}px sans-serif`;
+          ctx.fillText(slot.productName, cx, y + pad + px(0.09), labelW - pad * 2);
+        }
+        if (slot.productScentName) {
+          ctx.fillStyle = "#6b7280";
+          ctx.font = `${px(0.07)}px sans-serif`;
+          ctx.fillText(slot.productScentName, cx, y + pad + px(0.18), labelW - pad * 2);
+        }
+        if (slot.productSize) {
+          ctx.fillStyle = "#9ca3af";
+          ctx.font = `${px(0.06)}px sans-serif`;
+          ctx.fillText(slot.productSize, cx, y + pad + px(0.26), labelW - pad * 2);
+        }
       }
     }
+
+    return canvas;
+  }, []);
+
+  const captureSheetImages = useCallback(async (): Promise<string[]> => {
+    if (!activeSheetForPreview || !previewJob || gangedSheets.length === 0) return [];
+    const templateZones = (previewJob.templateZones as LabelZone[] | null) ?? null;
+    const templateBgColor = previewJob.templateBgColor ?? null;
+    const images: string[] = [];
+    for (const slots of gangedSheets) {
+      const canvas = await drawSheetToCanvas(slots, activeSheetForPreview, templateZones, templateBgColor);
+      images.push(canvas.toDataURL("image/png"));
+    }
     return images;
-  }, [previewRef]);
+  }, [activeSheetForPreview, previewJob, gangedSheets, drawSheetToCanvas]);
 
   const handlePrint = useCallback(async () => {
     if (!activeSheetForPreview || !previewJob || gangedSheets.length === 0) return;
