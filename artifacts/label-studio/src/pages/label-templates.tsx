@@ -28,8 +28,9 @@ import {
   LayoutTemplate, Plus, Save, Trash2, Upload, CheckCircle2,
   Circle, Loader2, ChevronDown, ChevronUp, AlertCircle, X,
   AlignLeft, AlignCenter, AlignRight, ImagePlus, Columns2,
-  Eye, RotateCcw,
+  Eye, RotateCcw, AlignStartVertical, AlignCenterVertical, AlignEndVertical,
 } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -294,6 +295,9 @@ function ZoneCanvas({ zones, selectedId, onSelect, onChange, onBeforeDrag, image
   const imgInY = imageInsetY ?? DEFAULT_IMAGE_SAFE_INSET;
   const txtInX = textInsetX  ?? DEFAULT_TEXT_SAFE_INSET;
   const txtInY = textInsetY  ?? DEFAULT_TEXT_SAFE_INSET;
+  // Never show guides in readOnly (preview/compare) mode
+  const effectiveShowImageSafe = !readOnly && showImageSafe;
+  const effectiveShowTextSafe  = !readOnly && showTextSafe;
   const containerRef = useRef<HTMLDivElement>(null);
   const [editingZoneId, setEditingZoneId] = useState<string | null>(null);
   const dragState = useRef<{
@@ -321,12 +325,12 @@ function ZoneCanvas({ zones, selectedId, onSelect, onChange, onBeforeDrag, image
     const dy = (e.clientY - ds.startClientY) / ds.canvasRect.height;
 
     const snapXs = [0, 1,
-      ...(showImageSafe ? [imgInX, 1 - imgInX] : []),
-      ...(showTextSafe  ? [txtInX, 1 - txtInX] : []),
+      ...(effectiveShowImageSafe ? [imgInX, 1 - imgInX] : []),
+      ...(effectiveShowTextSafe  ? [txtInX, 1 - txtInX] : []),
     ];
     const snapYs = [0, 1,
-      ...(showImageSafe ? [imgInY, 1 - imgInY] : []),
-      ...(showTextSafe  ? [txtInY, 1 - txtInY] : []),
+      ...(effectiveShowImageSafe ? [imgInY, 1 - imgInY] : []),
+      ...(effectiveShowTextSafe  ? [txtInY, 1 - txtInY] : []),
     ];
 
     onChange(zones.map(z => {
@@ -347,7 +351,7 @@ function ZoneCanvas({ zones, selectedId, onSelect, onChange, onBeforeDrag, image
       }
       return withMaxChars(updated);
     }));
-  }, [zones, onChange, showImageSafe, showTextSafe, imgInX, imgInY, txtInX, txtInY]);
+  }, [zones, onChange, effectiveShowImageSafe, effectiveShowTextSafe, imgInX, imgInY, txtInX, txtInY]);
 
   const handlePointerUp = useCallback(() => { dragState.current = null; }, []);
 
@@ -393,9 +397,13 @@ function ZoneCanvas({ zones, selectedId, onSelect, onChange, onBeforeDrag, image
           const charRatio = zone.text ? zone.text.length / zone.maxChars : 0;
           const isZoneTransparent = !zone.color || zone.color === "transparent";
           const bgColor = isZoneTransparent ? "transparent" : zone.color;
-          const fgColor = isZoneTransparent
+          const autoFgColor = isZoneTransparent
             ? getContrastColor(labelBgColor || "#ffffff")
             : getContrastColor(zone.color);
+          const fgColor = zone.textColor || autoFgColor;
+          const textAlignYItems =
+            zone.textAlignY === "middle" ? "center" :
+            zone.textAlignY === "bottom" ? "flex-end" : "flex-start";
           const pxFont = Math.max(7, zone.fontSize * (canvasH / 260));
           const pad = Math.max(3, pxFont * 0.25);
           const zoneFontFamily = HEADING_ROLES.has(zone.role)
@@ -471,7 +479,7 @@ function ZoneCanvas({ zones, selectedId, onSelect, onChange, onBeforeDrag, image
                     padding: `${pad}px ${pad * 1.4}px`,
                     lineHeight: 1.35,
                     display: "flex",
-                    alignItems: "flex-start",
+                    alignItems: textAlignYItems,
                     justifyContent: zone.textAlign === "center" ? "center" : zone.textAlign === "right" ? "flex-end" : "flex-start",
                     wordBreak: "break-word",
                     whiteSpace: "pre-wrap",
@@ -552,7 +560,7 @@ function ZoneCanvas({ zones, selectedId, onSelect, onChange, onBeforeDrag, image
         })}
 
         {/* ── Safe area guides ─────────────────────────────────────────── */}
-        {showImageSafe && (
+        {effectiveShowImageSafe && (
           <div
             className="absolute pointer-events-none"
             style={{
@@ -572,7 +580,7 @@ function ZoneCanvas({ zones, selectedId, onSelect, onChange, onBeforeDrag, image
             </span>
           </div>
         )}
-        {showTextSafe && (
+        {effectiveShowTextSafe && (
           <div
             className="absolute pointer-events-none"
             style={{
@@ -695,6 +703,25 @@ function ZonePanel({ zone, onChange, onDelete, brandFields, designSystem }: Zone
           </div>
 
           <div className="space-y-1.5">
+            <Label className="text-xs">Vertical align</Label>
+            <div className="flex gap-1">
+              {(["top", "middle", "bottom"] as const).map(align => (
+                <Button
+                  key={align} size="icon"
+                  variant={(zone.textAlignY ?? "top") === align ? "default" : "outline"}
+                  className="h-7 w-8"
+                  onClick={() => update({ textAlignY: align })}
+                  title={align}
+                >
+                  {align === "top"    && <AlignStartVertical  className="w-3 h-3" />}
+                  {align === "middle" && <AlignCenterVertical className="w-3 h-3" />}
+                  {align === "bottom" && <AlignEndVertical    className="w-3 h-3" />}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
             <Label className="text-xs">Font size — {zone.fontSize}pt</Label>
             <Slider
               min={6} max={32} step={1}
@@ -781,6 +808,42 @@ function ZonePanel({ zone, onChange, onDelete, brandFields, designSystem }: Zone
           />
         </div>
       </div>
+
+      {!NO_TEXT_ROLES.includes(zone.role) && (
+        <div className="space-y-1.5">
+          <Label className="text-xs">Text color</Label>
+          <div className="flex gap-2 items-center">
+            <button
+              type="button"
+              title="Auto-contrast (remove color override)"
+              onClick={() => update({ textColor: undefined })}
+              className={cn(
+                "h-8 w-10 shrink-0 border rounded flex items-center justify-center text-[10px] font-medium transition-colors",
+                !zone.textColor
+                  ? "bg-foreground text-background border-foreground"
+                  : "text-muted-foreground hover:bg-muted"
+              )}
+            >
+              Auto
+            </button>
+            <input
+              type="color"
+              value={zone.textColor || "#1a1a1a"}
+              onChange={e => update({ textColor: e.target.value })}
+              className="h-8 w-10 p-0.5 border rounded cursor-pointer"
+              disabled={!zone.textColor}
+            />
+            <Input
+              className="h-8 text-xs font-mono flex-1"
+              value={zone.textColor || ""}
+              placeholder="auto"
+              onChange={e => update({ textColor: e.target.value || undefined })}
+              disabled={!zone.textColor}
+            />
+          </div>
+          <p className="text-xs text-muted-foreground">Use "Auto" to let contrast decide, or pick white/black directly.</p>
+        </div>
+      )}
 
       <div className="space-y-1.5">
         <Label className="text-xs">Rotation</Label>
@@ -926,6 +989,7 @@ export default function LabelTemplates() {
   const [jsonText, setJsonText] = useState("");
   const [showPreview, setShowPreview] = useState(false);
   const [labelBgColor, setLabelBgColor] = useState<string>("");
+  const [rightPanelTab, setRightPanelTab] = useState<"zone" | "label" | "zones">("zones");
 
   const undoRef = useRef<LabelZone[] | null>(null);
   const saveUndo = useCallback(() => {
@@ -986,6 +1050,10 @@ export default function LabelTemplates() {
   useEffect(() => {
     if (showAdvancedJson) setJsonText(JSON.stringify(zones, null, 2));
   }, [showAdvancedJson, zones]);
+
+  useEffect(() => {
+    if (selectedZoneId) setRightPanelTab("zone");
+  }, [selectedZoneId]);
 
   const loadTemplate = (t: LabelTemplate) => {
     setMode("editing");
@@ -1141,7 +1209,7 @@ export default function LabelTemplates() {
       {/* Header */}
       <div className="flex justify-between items-center mb-4 shrink-0">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight kern-on">Label Templates</h1>
+          <h1 className="text-3xl font-bold tracking-tight kern-on">Designs</h1>
           <p className="text-muted-foreground mt-1">Design zone layouts for your labels.</p>
         </div>
         <div className="flex gap-2">
@@ -1358,103 +1426,134 @@ export default function LabelTemplates() {
                   </div>
                 </div>
 
-                {/* Right panel */}
-                <div className="w-72 border-l bg-card flex flex-col shrink-0 overflow-y-auto">
-                  {selectedZone ? (
-                    <div className="p-4">
-                      <ZonePanel
-                        zone={selectedZone}
-                        onChange={handleUpdateZone}
-                        onDelete={() => handleDeleteZone(selectedZone.id)}
-                        brandFields={brandFields}
-                        designSystem={designSystem}
-                      />
-                    </div>
-                  ) : (
-                    <div className="p-4 flex flex-col gap-4">
-                      <div>
-                        <Label className="text-xs">Description</Label>
-                        <Textarea
-                          className="mt-1.5 h-20 text-sm"
-                          placeholder="Notes about this template…"
-                          value={templateDescription}
-                          onChange={e => setTemplateDescription(e.target.value)}
-                        />
-                      </div>
+                {/* Right panel — tabbed */}
+                <div className="w-72 border-l bg-card flex flex-col shrink-0 overflow-hidden">
+                  <Tabs value={rightPanelTab} onValueChange={v => setRightPanelTab(v as typeof rightPanelTab)} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+                    <TabsList className="w-full rounded-none border-b h-9 shrink-0 bg-transparent justify-start px-2 gap-0.5">
+                      <TabsTrigger value="zone" className="flex-1 text-xs h-7 data-[state=active]:bg-muted data-[state=active]:shadow-none">Zone</TabsTrigger>
+                      <TabsTrigger value="label" className="flex-1 text-xs h-7 data-[state=active]:bg-muted data-[state=active]:shadow-none">Label</TabsTrigger>
+                      <TabsTrigger value="zones" className="flex-1 text-xs h-7 data-[state=active]:bg-muted data-[state=active]:shadow-none">
+                        Zones
+                        {REQUIRED_ROLES.some(r => !zones.some(z => z.role === r)) && (
+                          <span className="ml-1 w-1.5 h-1.5 rounded-full bg-destructive inline-block" />
+                        )}
+                      </TabsTrigger>
+                    </TabsList>
 
-                      <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Label Background</Label>
-                        <div className="flex gap-2 items-center">
-                          <button
-                            type="button"
-                            title="No background (transparent)"
-                            onClick={() => setLabelBgColor("")}
-                            className={cn(
-                              "h-8 w-10 shrink-0 border rounded flex items-center justify-center text-[10px] font-medium transition-colors",
-                              !labelBgColor
-                                ? "bg-foreground text-background border-foreground"
-                                : "text-muted-foreground hover:bg-muted"
-                            )}
-                            style={labelBgColor ? {
-                              backgroundImage: "linear-gradient(45deg,#e5e7eb 25%,transparent 25%),linear-gradient(-45deg,#e5e7eb 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#e5e7eb 75%),linear-gradient(-45deg,transparent 75%,#e5e7eb 75%)",
-                              backgroundSize: "6px 6px",
-                              backgroundPosition: "0 0,0 3px,3px -3px,-3px 0",
-                            } : {}}
-                          >
-                            {!labelBgColor ? "None" : ""}
-                          </button>
-                          <input
-                            type="color"
-                            value={labelBgColor || "#ffffff"}
-                            onChange={e => setLabelBgColor(e.target.value)}
-                            className="h-8 w-10 p-0.5 border rounded cursor-pointer"
-                            title="Pick a label background color"
-                          />
-                          <Input
-                            className="h-8 text-xs font-mono flex-1"
-                            value={labelBgColor || ""}
-                            placeholder="transparent"
-                            onChange={e => setLabelBgColor(e.target.value)}
+                    <TabsContent value="zone" className="flex-1 overflow-y-auto mt-0 data-[state=inactive]:hidden">
+                      {selectedZone ? (
+                        <div className="p-4">
+                          <ZonePanel
+                            zone={selectedZone}
+                            onChange={handleUpdateZone}
+                            onDelete={() => handleDeleteZone(selectedZone.id)}
+                            brandFields={brandFields}
+                            designSystem={designSystem}
                           />
                         </div>
-                        <p className="text-xs text-muted-foreground">The canvas background behind all zones.</p>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Safe Area Guides</Label>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-1.5">
-                            <span className="inline-block w-3 h-3 rounded-sm border-2 border-dashed border-orange-500" />
-                            <span className="text-sm">Image safe</span>
-                            <span className="text-xs text-muted-foreground">
-                              {assignedSheet && assignedSheet.bleedInches > 0
-                                ? `${assignedSheet.bleedInches}" bleed`
-                                : `${(DEFAULT_IMAGE_SAFE_INSET * 100).toFixed(0)}% inset`}
-                            </span>
+                      ) : (
+                        <div className="p-6 flex flex-col items-center justify-center gap-3 text-center min-h-32">
+                          <LayoutTemplate className="w-8 h-8 text-muted-foreground/30" />
+                          <div>
+                            <p className="text-sm font-medium text-muted-foreground">No zone selected</p>
+                            <p className="text-xs text-muted-foreground/70 mt-1">Click a zone on the canvas to edit its properties.</p>
                           </div>
-                          <Switch checked={showImageSafe} onCheckedChange={setShowImageSafe} />
                         </div>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-1.5">
-                            <span className="inline-block w-3 h-3 rounded-sm border-2 border-dashed border-blue-500" />
-                            <span className="text-sm">Text safe</span>
-                            <span className="text-xs text-muted-foreground">
-                              {assignedSheet && assignedSheet.safeAreaInches > 0
-                                ? `${assignedSheet.safeAreaInches}" margin`
-                                : `${(DEFAULT_TEXT_SAFE_INSET * 100).toFixed(0)}% inset`}
-                            </span>
+                      )}
+                    </TabsContent>
+
+                    <TabsContent value="label" className="flex-1 overflow-y-auto mt-0 data-[state=inactive]:hidden">
+                      <div className="p-4 flex flex-col gap-4">
+                        <div>
+                          <Label className="text-xs">Description</Label>
+                          <Textarea
+                            className="mt-1.5 h-20 text-sm"
+                            placeholder="Notes about this template…"
+                            value={templateDescription}
+                            onChange={e => setTemplateDescription(e.target.value)}
+                          />
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Label Background</Label>
+                          <div className="flex gap-2 items-center">
+                            <button
+                              type="button"
+                              title="No background (transparent)"
+                              onClick={() => setLabelBgColor("")}
+                              className={cn(
+                                "h-8 w-10 shrink-0 border rounded flex items-center justify-center text-[10px] font-medium transition-colors",
+                                !labelBgColor ? "bg-foreground text-background border-foreground" : "text-muted-foreground hover:bg-muted"
+                              )}
+                              style={labelBgColor ? { backgroundImage: "linear-gradient(45deg,#e5e7eb 25%,transparent 25%),linear-gradient(-45deg,#e5e7eb 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#e5e7eb 75%),linear-gradient(-45deg,transparent 75%,#e5e7eb 75%)", backgroundSize: "6px 6px", backgroundPosition: "0 0,0 3px,3px -3px,-3px 0" } : {}}
+                            >
+                              {!labelBgColor ? "None" : ""}
+                            </button>
+                            <input
+                              type="color"
+                              value={labelBgColor || "#ffffff"}
+                              onChange={e => setLabelBgColor(e.target.value)}
+                              className="h-8 w-10 p-0.5 border rounded cursor-pointer"
+                              title="Pick a label background color"
+                            />
+                            <Input
+                              className="h-8 text-xs font-mono flex-1"
+                              value={labelBgColor || ""}
+                              placeholder="transparent"
+                              onChange={e => setLabelBgColor(e.target.value)}
+                            />
                           </div>
-                          <Switch checked={showTextSafe} onCheckedChange={setShowTextSafe} />
+                          <p className="text-xs text-muted-foreground">The canvas background behind all zones.</p>
                         </div>
-                        <p className="text-xs text-muted-foreground">Zones snap to guides when dragged near them.</p>
+
+                        <div className="space-y-2">
+                          <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Safe Area Guides</Label>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1.5">
+                              <span className="inline-block w-3 h-3 rounded-sm border-2 border-dashed border-orange-500" />
+                              <span className="text-sm">Image safe</span>
+                              <span className="text-xs text-muted-foreground">
+                                {assignedSheet && assignedSheet.bleedInches > 0
+                                  ? `${assignedSheet.bleedInches}" bleed`
+                                  : `${(DEFAULT_IMAGE_SAFE_INSET * 100).toFixed(0)}% inset`}
+                              </span>
+                            </div>
+                            <Switch checked={showImageSafe} onCheckedChange={setShowImageSafe} />
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1.5">
+                              <span className="inline-block w-3 h-3 rounded-sm border-2 border-dashed border-blue-500" />
+                              <span className="text-sm">Text safe</span>
+                              <span className="text-xs text-muted-foreground">
+                                {assignedSheet && assignedSheet.safeAreaInches > 0
+                                  ? `${assignedSheet.safeAreaInches}" margin`
+                                  : `${(DEFAULT_TEXT_SAFE_INSET * 100).toFixed(0)}% inset`}
+                              </span>
+                            </div>
+                            <Switch checked={showTextSafe} onCheckedChange={setShowTextSafe} />
+                          </div>
+                          <p className="text-xs text-muted-foreground">Zones snap to guides when dragged near them.</p>
+                        </div>
+
+                        {imageUrl && (
+                          <>
+                            <Separator />
+                            <div>
+                              <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Reference Image</Label>
+                              <img src={imageUrl} alt="Reference" className="mt-2 rounded border w-full object-contain max-h-24" />
+                              <Button variant="ghost" size="sm" className="mt-1 w-full text-xs h-7 text-muted-foreground" onClick={() => setImageUrl(undefined)}>
+                                <X className="w-3 h-3 mr-1" /> Remove reference
+                              </Button>
+                            </div>
+                          </>
+                        )}
                       </div>
+                    </TabsContent>
 
-                      <Separator />
-
-                      <div className="space-y-2">
-                        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Zones</Label>
+                    <TabsContent value="zones" className="flex-1 overflow-y-auto mt-0 data-[state=inactive]:hidden">
+                      <div className="p-4 flex flex-col gap-2">
                         {zones.length === 0 && (
-                          <p className="text-xs text-muted-foreground">No zones. Upload a label or click "Add Zone".</p>
+                          <p className="text-xs text-muted-foreground">No zones yet. Upload a label or click "Add Zone".</p>
                         )}
                         {REQUIRED_ROLES.filter(role => !zones.some(z => z.role === role)).map(role => (
                           <div key={role} className="flex items-center gap-2 px-2.5 py-1.5 rounded-md border border-dashed border-destructive/50 bg-destructive/5 text-xs">
@@ -1478,8 +1577,7 @@ export default function LabelTemplates() {
                               key={z.id}
                               onClick={() => setSelectedZoneId(z.id)}
                               className={cn("w-full text-left px-2.5 py-1.5 rounded-md border text-xs flex items-center gap-2 transition-colors hover:bg-muted/60",
-                                selectedZoneId === z.id ? "border-foreground bg-muted" : `${s.border} ${s.bg}`,
-                              )}
+                                selectedZoneId === z.id ? "border-foreground bg-muted" : `${s.border} ${s.bg}`)}
                             >
                               <span className={cn("font-medium truncate flex-1", s.text)}>
                                 {ZONE_ROLES.find(r => r.value === z.role)?.label}
@@ -1489,28 +1587,15 @@ export default function LabelTemplates() {
                             </button>
                           );
                         })}
-                        <Button variant="outline" size="sm" className="w-full text-xs h-7" onClick={handleAddZone}>
+                        <Button variant="outline" size="sm" className="w-full text-xs h-7 mt-2" onClick={handleAddZone}>
                           <Plus className="w-3 h-3 mr-1" /> Add zone
                         </Button>
                       </div>
+                    </TabsContent>
+                  </Tabs>
 
-                      {imageUrl && (
-                        <>
-                          <Separator />
-                          <div>
-                            <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Reference Image</Label>
-                            <img src={imageUrl} alt="Reference" className="mt-2 rounded border w-full object-contain max-h-24" />
-                            <Button variant="ghost" size="sm" className="mt-1 w-full text-xs h-7 text-muted-foreground" onClick={() => setImageUrl(undefined)}>
-                              <X className="w-3 h-3 mr-1" /> Remove reference
-                            </Button>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Advanced JSON toggle */}
-                  <div className="mt-auto border-t">
+                  {/* Advanced JSON toggle — always visible at the bottom */}
+                  <div className="shrink-0 border-t">
                     <button
                       className="w-full flex items-center justify-between px-4 py-2.5 text-xs font-medium text-muted-foreground hover:bg-muted/30 transition-colors"
                       onClick={() => setShowAdvancedJson(v => !v)}

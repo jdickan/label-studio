@@ -18,11 +18,11 @@ export default function AppSidebar() {
   const [location] = useLocation();
 
   const navigation = [
-    { name: "Dashboard", href: "/dashboard", icon: Home },
-    { name: "Products", href: "/products", icon: Droplets },
-    { name: "Label Sheets", href: "/label-sheets", icon: Layers },
-    { name: "Label Templates", href: "/label-templates", icon: LayoutTemplate },
-    { name: "Print Jobs", href: "/print-jobs", icon: Printer },
+    { name: "Dashboard",  href: "/dashboard",        icon: Home           },
+    { name: "Print Jobs", href: "/print-jobs",        icon: Printer        },
+    { name: "Products",   href: "/products",          icon: Droplets       },
+    { name: "Designs",    href: "/label-templates",   icon: LayoutTemplate },
+    { name: "Sheets",     href: "/label-sheets",      icon: Layers         },
   ];
 
   return (
@@ -62,7 +62,7 @@ export default function AppSidebar() {
       <SidebarFooter className="py-4">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={location === "/design-system"} tooltip="Design System">
+            <SidebarMenuButton asChild isActive={location === "/design-system"} tooltip="Brand Settings">
               <Link href="/design-system" className="flex items-center gap-2">
                 <Palette className="w-4 h-4" />
                 <span>Brand Settings</span>

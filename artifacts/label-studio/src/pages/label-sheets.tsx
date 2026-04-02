@@ -893,7 +893,7 @@ export default function LabelSheets() {
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Label Sheets</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Sheets</h1>
           <p className="text-muted-foreground mt-1">Manage physical paper dimensions and templates.</p>
         </div>
         <div className="flex gap-2">

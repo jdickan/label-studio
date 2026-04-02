@@ -156,6 +156,10 @@ export interface LabelZone {
   rotation?: number;
   /** Base64 data URL for photo-area / logo-area zones */
   imageUrl?: string;
+  /** Explicit text color override (e.g. #ffffff). Absent = auto-contrast. */
+  textColor?: string;
+  /** Vertical text alignment within the zone (default: top) */
+  textAlignY?: "top" | "middle" | "bottom";
 }
 
 export type LabelZoneAnalysisResultBrandMatches = { [key: string]: string };
