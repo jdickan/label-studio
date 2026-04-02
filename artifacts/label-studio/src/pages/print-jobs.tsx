@@ -553,85 +553,45 @@ export default function PrintJobs() {
     }
   };
 
-  const handlePrint = () => {
-    window.print();
-  };
+  const captureSheetImages = useCallback(async (): Promise<string[]> => {
+    const { default: html2canvas } = await import("html2canvas");
+    const sheetEls = previewRef.current?.querySelectorAll<HTMLElement>("[data-sheet-page]");
+    if (!sheetEls || sheetEls.length === 0) return [];
+    const images: string[] = [];
+    for (const el of Array.from(sheetEls)) {
+      const canvas = await html2canvas(el, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: "#ffffff",
+        logging: false,
+      });
+      images.push(canvas.toDataURL("image/png"));
+    }
+    return images;
+  }, [previewRef]);
 
-  const drawSheetToCanvas = useCallback((slots: GangedSlot[], sheet: LabelSheetType): HTMLCanvasElement => {
-    const DPI = 150;
-    const px = (inches: number) => Math.round(inches * DPI);
-    const canvas = document.createElement("canvas");
-    canvas.width = px(sheet.pageWidth);
-    canvas.height = px(sheet.pageHeight);
-    const ctx = canvas.getContext("2d")!;
-
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    const topPad = px(sheet.topMargin);
-    const leftPad = px(sheet.leftMargin);
-    const labelW = px(sheet.labelWidth);
-    const labelH = px(sheet.labelHeight);
-    const colGap = px(sheet.horizontalGap || 0);
-    const rowGap = px(sheet.verticalGap || 0);
-
-    slots.forEach((slot, i) => {
-      const col = i % sheet.labelsAcross;
-      const row = Math.floor(i / sheet.labelsAcross);
-      const x = leftPad + col * (labelW + colGap);
-      const y = topPad + row * (labelH + rowGap);
-
-      if (slot.type === "blank" && slot.isIntentionalBlank) {
-        ctx.save();
-        ctx.setLineDash([3, 3]);
-        ctx.strokeStyle = "#f97316";
-        ctx.lineWidth = 1;
-        ctx.strokeRect(x + 0.5, y + 0.5, labelW - 1, labelH - 1);
-        ctx.fillStyle = "#fed7aa22";
-        ctx.fillRect(x, y, labelW, labelH);
-        ctx.restore();
-        ctx.fillStyle = "#f97316";
-        ctx.font = `${px(0.06)}px sans-serif`;
-        ctx.textAlign = "center";
-        ctx.fillText("BLANK", x + labelW / 2, y + labelH / 2 + 3);
-      } else if (slot.type === "blank") {
-        ctx.save();
-        ctx.setLineDash([2, 2]);
-        ctx.strokeStyle = "#e5e7eb";
-        ctx.lineWidth = 0.5;
-        ctx.strokeRect(x, y, labelW, labelH);
-        ctx.restore();
-      } else {
-        ctx.strokeStyle = "#d1d5db";
-        ctx.lineWidth = 0.5;
-        ctx.strokeRect(x + 0.25, y + 0.25, labelW - 0.5, labelH - 0.5);
-
-        const cx = x + labelW / 2;
-        const pad = px(0.05);
-
-        if (slot.productName) {
-          ctx.fillStyle = "#111827";
-          ctx.font = `bold ${px(0.09)}px sans-serif`;
-          ctx.textAlign = "center";
-          ctx.fillText(slot.productName, cx, y + pad + px(0.09), labelW - pad * 2);
-        }
-        if (slot.productScentName) {
-          ctx.fillStyle = "#6b7280";
-          ctx.font = `${px(0.07)}px sans-serif`;
-          ctx.textAlign = "center";
-          ctx.fillText(slot.productScentName, cx, y + pad + px(0.18), labelW - pad * 2);
-        }
-        if (slot.productSize) {
-          ctx.fillStyle = "#9ca3af";
-          ctx.font = `${px(0.06)}px sans-serif`;
-          ctx.textAlign = "center";
-          ctx.fillText(slot.productSize, cx, y + pad + px(0.26), labelW - pad * 2);
-        }
-      }
-    });
-
-    return canvas;
-  }, []);
+  const handlePrint = useCallback(async () => {
+    if (!activeSheetForPreview || !previewJob || gangedSheets.length === 0) return;
+    const images = await captureSheetImages();
+    if (images.length === 0) return;
+    const pageW = activeSheetForPreview.pageWidth;
+    const pageH = activeSheetForPreview.pageHeight;
+    const win = window.open("", "_blank");
+    if (!win) return;
+    const html = `<!DOCTYPE html><html><head><title>${previewJob.name || "Print Job"}</title><style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      @page { size: ${pageW}in ${pageH}in; margin: 0; }
+      body { background: white; }
+      .sheet { width: ${pageW}in; height: ${pageH}in; page-break-after: always; display: flex; align-items: flex-start; justify-content: flex-start; overflow: hidden; }
+      .sheet img { width: 100%; height: 100%; display: block; }
+      .sheet:last-child { page-break-after: auto; }
+    </style></head><body>
+      ${images.map(src => `<div class="sheet"><img src="${src}" /></div>`).join("")}
+      <script>window.onload = function() { window.print(); window.onafterprint = function() { window.close(); }; };<\/script>
+    </body></html>`;
+    win.document.write(html);
+    win.document.close();
+  }, [activeSheetForPreview, previewJob, gangedSheets, captureSheetImages]);
 
   const handleDownloadPdf = useCallback(async () => {
     if (!activeSheetForPreview || !previewJob || gangedSheets.length === 0) {
@@ -640,17 +600,19 @@ export default function PrintJobs() {
     }
     setIsDownloadingPdf(true);
     try {
-      const { default: jsPDF } = await import("jspdf");
+      const [{ default: jsPDF }, images] = await Promise.all([
+        import("jspdf"),
+        captureSheetImages(),
+      ]);
+      if (images.length === 0) throw new Error("No sheets to export");
       const pageW = activeSheetForPreview.pageWidth;
       const pageH = activeSheetForPreview.pageHeight;
       const orientation = pageW >= pageH ? "landscape" : "portrait";
       const pdf = new jsPDF({ orientation, unit: "in", format: [pageW, pageH] });
 
-      for (let i = 0; i < gangedSheets.length; i++) {
-        const canvas = drawSheetToCanvas(gangedSheets[i], activeSheetForPreview);
-        const imgData = canvas.toDataURL("image/png");
+      for (let i = 0; i < images.length; i++) {
         if (i > 0) pdf.addPage([pageW, pageH], orientation);
-        pdf.addImage(imgData, "PNG", 0, 0, pageW, pageH);
+        pdf.addImage(images[i], "PNG", 0, 0, pageW, pageH);
       }
 
       const jobName = previewJob.name?.replace(/[^a-z0-9]/gi, "_") || "print_job";
@@ -662,7 +624,7 @@ export default function PrintJobs() {
     } finally {
       setIsDownloadingPdf(false);
     }
-  }, [activeSheetForPreview, previewJob, gangedSheets, drawSheetToCanvas, toast]);
+  }, [activeSheetForPreview, previewJob, gangedSheets, captureSheetImages, toast]);
 
   const totalLabelsInForm = useMemo(() => {
     return formData.items.reduce((s, i) => s + (i.quantity || 0), 0);
