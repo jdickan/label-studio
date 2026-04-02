@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
-import { db, printJobsTable, labelSheetsTable, productsTable, labelTemplatesTable } from "@workspace/db";
+import { db, printJobsTable, labelSheetsTable, productsTable, labelTemplatesTable, labelDesignsTable } from "@workspace/db";
 import {
   CreatePrintJobBody,
   UpdatePrintJobBody,
@@ -46,6 +46,17 @@ async function buildPrintJobResponse(job: typeof printJobsTable.$inferSelect) {
     }
   }
 
+  let designObjects: unknown[] | null = null;
+  let designBgColor: string | null = null;
+  const labelDesignId = (job as typeof job & { labelDesignId?: number | null }).labelDesignId ?? null;
+  if (labelDesignId) {
+    const [design] = await db.select().from(labelDesignsTable).where(eq(labelDesignsTable.id, labelDesignId));
+    if (design) {
+      designObjects = Array.isArray(design.objects) ? design.objects : [];
+      designBgColor = null; // designs don't have a bgColor field yet
+    }
+  }
+
   return {
     id: job.id,
     name: job.name,
@@ -64,8 +75,11 @@ async function buildPrintJobResponse(job: typeof printJobsTable.$inferSelect) {
     createdAt: job.createdAt,
     updatedAt: job.updatedAt,
     labelTemplateId: job.labelTemplateId ?? null,
+    labelDesignId,
     templateZones,
     templateBgColor,
+    designObjects,
+    designBgColor,
   };
 }
 
@@ -84,16 +98,18 @@ router.post("/", async (req, res) => {
   try {
     const body = CreatePrintJobBody.parse(req.body);
     const labelTemplateId = typeof req.body.labelTemplateId === "number" ? req.body.labelTemplateId : null;
+    const labelDesignId = typeof req.body.labelDesignId === "number" ? req.body.labelDesignId : null;
     const [job] = await db.insert(printJobsTable).values({
       name: body.name,
       labelSheetId: body.labelSheetId,
       labelTemplateId,
+      labelDesignId,
       items: body.items,
       jobType: body.jobType ?? "standard",
       blankSlots: body.blankSlots ?? [],
       notes: body.notes,
       status: "draft",
-    }).returning();
+    } as typeof printJobsTable.$inferInsert).returning();
     const result = await buildPrintJobResponse(job);
     res.status(201).json(result);
   } catch (err) {
@@ -129,6 +145,9 @@ router.patch("/:id", async (req, res) => {
     if (body.status !== undefined) updateData.status = body.status;
     if ("labelTemplateId" in req.body) {
       updateData.labelTemplateId = typeof req.body.labelTemplateId === "number" ? req.body.labelTemplateId : null;
+    }
+    if ("labelDesignId" in req.body) {
+      updateData.labelDesignId = typeof req.body.labelDesignId === "number" ? req.body.labelDesignId : null;
     }
     const [job] = await db.update(printJobsTable)
       .set(updateData)

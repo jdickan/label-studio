@@ -8,6 +8,7 @@ import {
   useGetProducts,
   useUpdatePrintJob,
   useGetLabelTemplates,
+  useGetLabelDesigns,
   getGetPrintJobsQueryKey 
 } from "@workspace/api-client-react";
 import type { LabelZone } from "@workspace/api-client-react";
@@ -235,6 +236,115 @@ function resolveZoneText(zone: LabelZone, slot: GangedSlot): string {
   }
 }
 
+type DesignObj = {
+  id: string;
+  type: "text" | "rect" | "ellipse";
+  x: number; y: number; w: number; h: number;
+  visible?: boolean;
+  role?: string;
+  content?: string;
+  fontFamily?: string;
+  fontSize?: number;
+  bold?: boolean; italic?: boolean; underline?: boolean;
+  align?: "left" | "center" | "right";
+  letterSpacing?: number;
+  color?: string;
+  fill?: string;
+  stroke?: string;
+  strokeWidth?: number;
+  borderRadius?: number;
+};
+
+function resolveDesignText(obj: DesignObj, slot: GangedSlot): string {
+  const fallback = obj.content ?? "";
+  if (slot.type !== "product") return fallback;
+  switch (obj.role) {
+    case "product-name": return slot.productName || fallback;
+    case "scent-notes":
+    case "scent-name": return slot.productScentName || fallback;
+    case "weight-volume":
+    case "size": return slot.productSize || fallback;
+    default: return fallback;
+  }
+}
+
+function DesignObjectRenderer({ objects, bgColor, labelWidthIn, labelHeightIn, slot }: {
+  objects: DesignObj[];
+  bgColor?: string | null;
+  labelWidthIn: number;
+  labelHeightIn: number;
+  slot: GangedSlot;
+}) {
+  const PX_PER_IN = 96;
+  return (
+    <div
+      style={{
+        position: "absolute", inset: 0,
+        background: bgColor && bgColor !== "transparent" ? bgColor : "transparent",
+      }}
+    >
+      {objects.filter(o => o.visible !== false).map(obj => {
+        const left = obj.x * PX_PER_IN;
+        const top = obj.y * PX_PER_IN;
+        const width = obj.w * PX_PER_IN;
+        const height = obj.h * PX_PER_IN;
+        if (obj.type === "rect") {
+          return (
+            <div
+              key={obj.id}
+              style={{
+                position: "absolute", left, top, width, height,
+                background: obj.fill || "transparent",
+                border: obj.stroke ? `${obj.strokeWidth ?? 1}px solid ${obj.stroke}` : undefined,
+                borderRadius: obj.borderRadius ?? 0,
+                boxSizing: "border-box",
+              }}
+            />
+          );
+        }
+        if (obj.type === "ellipse") {
+          return (
+            <div
+              key={obj.id}
+              style={{
+                position: "absolute", left, top, width, height,
+                background: obj.fill || "transparent",
+                border: obj.stroke ? `${obj.strokeWidth ?? 1}px solid ${obj.stroke}` : undefined,
+                borderRadius: "50%",
+                boxSizing: "border-box",
+              }}
+            />
+          );
+        }
+        const ptToPx = (pt: number) => pt * (4 / 3);
+        const fsPx = ptToPx(obj.fontSize ?? 12);
+        const text = resolveDesignText(obj, slot);
+        return (
+          <div
+            key={obj.id}
+            style={{
+              position: "absolute", left, top, width, height,
+              fontSize: fsPx, fontFamily: obj.fontFamily || "Arial",
+              fontWeight: obj.bold ? "bold" : "normal",
+              fontStyle: obj.italic ? "italic" : "normal",
+              textDecoration: obj.underline ? "underline" : "none",
+              textAlign: obj.align || "left",
+              color: obj.color || "#000000",
+              letterSpacing: obj.letterSpacing ? `${obj.letterSpacing}px` : undefined,
+              overflow: "hidden", boxSizing: "border-box",
+              padding: "2px",
+              display: "flex",
+              alignItems: "flex-start",
+            }}
+          >
+            <span style={{ overflow: "hidden", maxWidth: "100%" }}>{text}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function ZoneRenderer({
   zones, bgColor, widthPx, heightPx, slot,
 }: {
@@ -298,11 +408,15 @@ function LabelCell({
   sheet,
   templateZones,
   templateBgColor,
+  designObjects,
+  designBgColor,
 }: {
   slot: GangedSlot;
   sheet: LabelSheetType;
   templateZones?: LabelZone[] | null;
   templateBgColor?: string | null;
+  designObjects?: DesignObj[] | null;
+  designBgColor?: string | null;
 }) {
   const DPI = 96;
   const widthPx = sheet.labelWidth * DPI;
@@ -339,6 +453,20 @@ function LabelCell({
     );
   }
 
+  if (designObjects && designObjects.length > 0) {
+    return (
+      <div className="border border-gray-300 print:border-transparent" style={{ ...shapeStyle, position: "relative" }}>
+        <DesignObjectRenderer
+          objects={designObjects}
+          bgColor={designBgColor}
+          labelWidthIn={sheet.labelWidth}
+          labelHeightIn={sheet.labelHeight}
+          slot={slot}
+        />
+      </div>
+    );
+  }
+
   if (templateZones && templateZones.length > 0) {
     return (
       <div className="border border-gray-300 print:border-transparent" style={{ ...shapeStyle, position: "relative" }}>
@@ -371,6 +499,7 @@ type FormData = {
   name: string;
   labelSheetId: string;
   labelTemplateId: string;
+  labelDesignId: string;
   jobType: "standard" | "reprint";
   blankSlots: number[];
   notes: string;
@@ -383,6 +512,7 @@ export default function PrintJobs() {
   const { data: sheets } = useGetLabelSheets({ query: { queryKey: ["labelSheets"] } });
   const { data: products } = useGetProducts({ query: { queryKey: ["products"] } });
   const { data: templates } = useGetLabelTemplates({ query: { queryKey: ["labelTemplates"] } });
+  const { data: designs } = useGetLabelDesigns({ query: { queryKey: ["labelDesigns"] } });
   
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
   const [editJobId, setEditJobId] = useState<number | null>(null);
@@ -392,6 +522,7 @@ export default function PrintJobs() {
     name: "",
     labelSheetId: "",
     labelTemplateId: "",
+    labelDesignId: "",
     jobType: "standard",
     blankSlots: [],
     notes: "",
@@ -460,6 +591,7 @@ export default function PrintJobs() {
       name: `Print Job - ${format(new Date(), "MMM d")}`,
       labelSheetId: "",
       labelTemplateId: "",
+      labelDesignId: "",
       jobType: "standard",
       blankSlots: [],
       notes: "",
@@ -474,6 +606,7 @@ export default function PrintJobs() {
       name: job.name,
       labelSheetId: job.labelSheetId.toString(),
       labelTemplateId: job.labelTemplateId ? job.labelTemplateId.toString() : "",
+      labelDesignId: job.labelDesignId ? job.labelDesignId.toString() : "",
       jobType: (job.jobType as "standard" | "reprint") || "standard",
       blankSlots: (job.blankSlots as number[]) || [],
       notes: job.notes || "",
@@ -528,6 +661,7 @@ export default function PrintJobs() {
       return;
     }
     const labelTemplateId = formData.labelTemplateId ? parseInt(formData.labelTemplateId) : null;
+    const labelDesignId = formData.labelDesignId ? parseInt(formData.labelDesignId) : null;
     if (editJobId !== null) {
       editMutation.mutate({
         id: editJobId,
@@ -535,6 +669,7 @@ export default function PrintJobs() {
           name: formData.name,
           labelSheetId: parseInt(formData.labelSheetId),
           labelTemplateId,
+          labelDesignId,
           jobType: formData.jobType,
           blankSlots: formData.blankSlots,
           items: validItems,
@@ -547,6 +682,7 @@ export default function PrintJobs() {
           name: formData.name,
           labelSheetId: parseInt(formData.labelSheetId),
           labelTemplateId,
+          labelDesignId,
           jobType: formData.jobType,
           blankSlots: formData.blankSlots,
           items: validItems,
@@ -561,6 +697,8 @@ export default function PrintJobs() {
     sheet: LabelSheetType,
     templateZones: LabelZone[] | null,
     templateBgColor: string | null,
+    designObjs: DesignObj[] | null = null,
+    designBg: string | null = null,
   ): Promise<HTMLCanvasElement> => {
     const DPI = 150;
     const px = (inches: number) => Math.round(inches * DPI);
@@ -647,6 +785,61 @@ export default function PrintJobs() {
         ctx.strokeStyle = "#d1d5db";
         ctx.lineWidth = 0.5;
         ctx.strokeRect(x, y, labelW, labelH);
+        ctx.restore();
+      } else if (designObjs && designObjs.length > 0) {
+        if (designBg && designBg !== "transparent") {
+          ctx.fillStyle = designBg;
+          ctx.fillRect(x, y, labelW, labelH);
+        }
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(x, y, labelW, labelH);
+        ctx.clip();
+        for (const obj of designObjs) {
+          if (obj.visible === false) continue;
+          const ox = x + obj.x * DPI;
+          const oy = y + obj.y * DPI;
+          const ow = obj.w * DPI;
+          const oh = obj.h * DPI;
+          if (obj.type === "rect") {
+            ctx.fillStyle = obj.fill || "transparent";
+            if (obj.fill && obj.fill !== "transparent") ctx.fillRect(ox, oy, ow, oh);
+            if (obj.stroke) {
+              ctx.strokeStyle = obj.stroke;
+              ctx.lineWidth = obj.strokeWidth ?? 1;
+              ctx.strokeRect(ox, oy, ow, oh);
+            }
+          } else if (obj.type === "ellipse") {
+            ctx.beginPath();
+            ctx.ellipse(ox + ow / 2, oy + oh / 2, ow / 2, oh / 2, 0, 0, Math.PI * 2);
+            if (obj.fill && obj.fill !== "transparent") {
+              ctx.fillStyle = obj.fill;
+              ctx.fill();
+            }
+            if (obj.stroke) {
+              ctx.strokeStyle = obj.stroke;
+              ctx.lineWidth = obj.strokeWidth ?? 1;
+              ctx.stroke();
+            }
+          } else {
+            const ptToPx = (pt: number) => pt * (DPI / 72);
+            const fsPx = ptToPx(obj.fontSize ?? 12);
+            const text = resolveDesignText(obj, slot);
+            if (text) {
+              ctx.fillStyle = obj.color || "#000000";
+              const weight = obj.bold ? "bold" : "normal";
+              const style = obj.italic ? "italic" : "normal";
+              ctx.font = `${style} ${weight} ${fsPx}px ${obj.fontFamily || "Arial"}`;
+              ctx.textAlign = obj.align || "left";
+              ctx.textBaseline = "top";
+              const pad = 2;
+              const lines = wrapText(text, ow - pad * 2, fsPx);
+              const lh = fsPx * 1.2;
+              const lx = obj.align === "center" ? ox + ow / 2 : obj.align === "right" ? ox + ow - pad : ox + pad;
+              lines.forEach((line, li) => ctx.fillText(line, lx, oy + pad + li * lh, ow - pad * 2));
+            }
+          }
+        }
         ctx.restore();
       } else if (templateZones && templateZones.length > 0) {
         if (templateBgColor && templateBgColor !== "transparent") {
@@ -763,9 +956,11 @@ export default function PrintJobs() {
     if (!activeSheetForPreview || !previewJob || gangedSheets.length === 0) return [];
     const templateZones = (previewJob.templateZones as LabelZone[] | null) ?? null;
     const templateBgColor = previewJob.templateBgColor ?? null;
+    const designObjs = (previewJob.designObjects as DesignObj[] | null) ?? null;
+    const designBg = previewJob.designBgColor ?? null;
     const images: string[] = [];
     for (const slots of gangedSheets) {
-      const canvas = await drawSheetToCanvas(slots, activeSheetForPreview, templateZones, templateBgColor);
+      const canvas = await drawSheetToCanvas(slots, activeSheetForPreview, templateZones, templateBgColor, designObjs, designBg);
       images.push(canvas.toDataURL("image/png"));
     }
     return images;
@@ -950,24 +1145,44 @@ export default function PrintJobs() {
                 </div>
               </div>
 
-              {/* Label Design */}
+              {/* Label Design (Zone Template) */}
               <div className="space-y-2">
-                <Label>Label Design</Label>
+                <Label>Zone Template</Label>
                 <Select
                   value={formData.labelTemplateId || "none"}
-                  onValueChange={v => setFormData(p => ({ ...p, labelTemplateId: v === "none" ? "" : v }))}
+                  onValueChange={v => setFormData(p => ({ ...p, labelTemplateId: v === "none" ? "" : v, labelDesignId: v === "none" ? p.labelDesignId : "" }))}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="No design — plain text fallback" />
+                    <SelectValue placeholder="No zone template — plain text fallback" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">No design (plain text)</SelectItem>
+                    <SelectItem value="none">None (plain text)</SelectItem>
                     {templates?.map(t => (
                       <SelectItem key={t.id} value={t.id.toString()}>{t.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-muted-foreground">Choose a label design to render in the print preview. Zone text is auto-filled from each product's data.</p>
+                <p className="text-xs text-muted-foreground">Zone text is auto-filled from each product's data. Use one renderer at a time — selecting a Visual Design below will override this.</p>
+              </div>
+
+              {/* Visual Design File */}
+              <div className="space-y-2">
+                <Label>Visual Design File</Label>
+                <Select
+                  value={formData.labelDesignId || "none"}
+                  onValueChange={v => setFormData(p => ({ ...p, labelDesignId: v === "none" ? "" : v, labelTemplateId: v === "none" ? p.labelTemplateId : "" }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="No visual design" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {designs?.map(d => (
+                      <SelectItem key={d.id} value={d.id.toString()}>{d.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">Use a design file created in the Designs editor. Design objects with roles will auto-substitute product data. Overrides the zone template above.</p>
               </div>
 
               {/* Reprint toggle */}
@@ -1139,6 +1354,8 @@ export default function PrintJobs() {
                       sheet={activeSheetForPreview}
                       templateZones={previewJob?.templateZones as LabelZone[] | null}
                       templateBgColor={previewJob?.templateBgColor}
+                      designObjects={previewJob?.designObjects as DesignObj[] | null}
+                      designBgColor={previewJob?.designBgColor}
                     />
                   ))}
                 </div>

@@ -589,6 +589,7 @@ router.post("/import", async (req, res) => {
             type: "text",
             x: xIn, y: yIn, w: wIn, h: hIn,
             locked: false, visible: true,
+            role: zone.role,
             content: zone.text || `[${String(zone.role).replace(/-/g, " ")}]`,
             fontFamily: "Arial",
             fontSize: Math.max(6, Math.min(72, zone.fontSize ?? 12)),

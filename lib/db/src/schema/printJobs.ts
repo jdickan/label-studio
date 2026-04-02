@@ -3,12 +3,14 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { labelSheetsTable } from "./labelSheets";
 import { labelTemplatesTable } from "./labelTemplates";
+import { labelDesignsTable } from "./labelDesigns";
 
 export const printJobsTable = pgTable("print_jobs", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   labelSheetId: integer("label_sheet_id").notNull().references(() => labelSheetsTable.id),
   labelTemplateId: integer("label_template_id").references(() => labelTemplatesTable.id, { onDelete: "set null" }),
+  labelDesignId: integer("label_design_id").references(() => labelDesignsTable.id, { onDelete: "set null" }),
   items: jsonb("items").notNull().default([]),
   status: text("status", { enum: ["draft", "ready", "printed"] }).notNull().default("draft"),
   jobType: text("job_type", { enum: ["standard", "reprint"] }).notNull().default("standard"),

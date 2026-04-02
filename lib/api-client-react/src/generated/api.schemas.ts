@@ -398,8 +398,11 @@ export interface PrintJob {
   createdAt: string;
   updatedAt: string;
   labelTemplateId?: number | null;
+  labelDesignId?: number | null;
   templateZones?: LabelZone[] | null;
   templateBgColor?: string | null;
+  designObjects?: unknown[] | null;
+  designBgColor?: string | null;
 }
 
 export type CreatePrintJobBodyJobType =
