@@ -359,23 +359,6 @@ function ToolPanel({
           <span>Image upload coming soon</span>
         </div>
       )}
-
-      <div className="mt-1">
-        <Label className="text-xs text-muted-foreground mb-1 block">Label sheet</Label>
-        <Select value={selectedSheetId} onValueChange={onSheetChange}>
-          <SelectTrigger className="h-7 text-xs">
-            <SelectValue placeholder="None (default size)" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">None (4″ × 2″)</SelectItem>
-            {sheets.map((s) => (
-              <SelectItem key={s.id} value={String(s.id)}>
-                {s.name} {s.code ? `(${s.code})` : ""} {s.labelWidth}″×{s.labelHeight}″
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
     </div>
   );
 }
@@ -1097,28 +1080,28 @@ export default function Designs() {
     const title = activeDesign ? activeDesign.name : "Designs";
     const actions = (
       <div className="flex items-center gap-1.5">
+        {activeDesignId && (
+          <Select value={selectedSheetId} onValueChange={handleSheetChange}>
+            <SelectTrigger className="h-7 text-xs w-40">
+              <SelectValue placeholder="No sheet" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">No sheet</SelectItem>
+              {sheets.map((s) => (
+                <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
         <Button size="sm" className="h-7 text-xs" onClick={handleCreate} title="Create a new design">
           <Plus className="w-3.5 h-3.5 mr-1" />
           New Design
         </Button>
         {activeDesignId && (
-          <>
-            <Select value={selectedSheetId} onValueChange={handleSheetChange}>
-              <SelectTrigger className="h-7 text-xs w-40">
-                <SelectValue placeholder="No sheet" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">No sheet</SelectItem>
-                {sheets.map((s) => (
-                  <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button onClick={handleSave} disabled={isSaving || !isDirty} size="sm" variant={isDirty ? "default" : "ghost"} className="h-7 text-xs px-3">
-              <Save className="w-3.5 h-3.5 mr-1" />
-              {isSaving ? "Saving…" : isDirty ? "Save" : "Saved"}
-            </Button>
-          </>
+          <Button onClick={handleSave} disabled={isSaving || !isDirty} size="sm" variant={isDirty ? "default" : "ghost"} className="h-7 text-xs px-3">
+            <Save className="w-3.5 h-3.5 mr-1" />
+            {isSaving ? "Saving…" : isDirty ? "Save" : "Saved"}
+          </Button>
         )}
       </div>
     );
