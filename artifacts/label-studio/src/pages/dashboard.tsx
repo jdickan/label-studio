@@ -191,7 +191,9 @@ function ReviewConfirmDialog({ open, result, filename, onClose, onImportSuccess 
     e.target.value = "";
   };
 
-  const templateName = filename.replace(/\.[^.]+$/, "").replace(/[-_]/g, " ") + " (Magic Import)";
+  const [templateName, setTemplateName] = useState(
+    filename.replace(/\.[^.]+$/, "").replace(/[-_]/g, " ") + " (Magic Import)"
+  );
   const enabledZones = result.zones.filter((z) => zoneEnabled[z.id]);
 
   const handleImport = async () => {

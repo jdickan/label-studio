@@ -6,7 +6,7 @@ import { promisify } from "util";
 import { writeFile, readFile, rm, mkdtemp } from "fs/promises";
 import { join } from "path";
 import { tmpdir } from "os";
-import { db, labelTemplatesTable, designSystemTable, labelSheetsTable } from "@workspace/db";
+import { db, labelTemplatesTable, designSystemTable, labelSheetsTable, labelDesignsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 
 const execAsync = promisify(exec);
@@ -542,6 +542,22 @@ router.post("/import", async (req, res) => {
       labelSheetId: labelSheetId ?? null,
     }).returning();
 
+    // If this is master template, also create a visual design template
+    let design = null;
+    if (isMasterTemplate && template) {
+      try {
+        const [newDesign] = await db.insert(labelDesignsTable).values({
+          name: templateName,
+          description: `Master Design — ${productType ?? "unknown"} label, ${w}" × ${h}"`,
+          labelSheetId: labelSheetId ?? null,
+          objects: [], // Empty canvas; user can add design elements later
+        }).returning();
+        design = newDesign;
+      } catch {
+        // Non-fatal — design template creation failed but import succeeded
+      }
+    }
+
     // Patch design system
     const dsRows = await db.select().from(designSystemTable).limit(1);
     const dsExists = dsRows.length > 0;
@@ -575,7 +591,7 @@ router.post("/import", async (req, res) => {
         .returning();
     }
 
-    res.json({ template, designSystem: ds });
+    res.json({ template, design, designSystem: ds });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Import failed";
     res.status(500).json({ error: message });
