@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -292,6 +291,25 @@ function ReviewConfirmDialog({ open, result, filename, onClose, onImportSuccess 
                   </div>
                 </div>
 
+                {/* Master Template — prominent top-of-form decision */}
+                <div className={`flex items-start gap-3 p-4 rounded-lg border-2 transition-colors ${isMasterTemplate ? "border-amber-400 bg-amber-50 dark:bg-amber-950/30" : "border-border bg-muted/30 hover:border-primary/40"}`}>
+                  <Switch
+                    id="master-template"
+                    checked={isMasterTemplate}
+                    onCheckedChange={setIsMasterTemplate}
+                    className="mt-0.5"
+                  />
+                  <div className="flex-1">
+                    <Label htmlFor="master-template" className="text-sm font-semibold cursor-pointer flex items-center gap-2">
+                      <Sparkles className={`w-4 h-4 ${isMasterTemplate ? "text-amber-500" : "text-muted-foreground"}`} />
+                      Set as master design template
+                    </Label>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      The master template is the default starting point for all new label designs. When you create labels for other product types, this zone layout will be used as the reference. You can update it at any time from the Zones page.
+                    </p>
+                  </div>
+                </div>
+
                 {/* Label Dimensions */}
                 <div className="space-y-2">
                   <h4 className="text-sm font-semibold">Label Dimensions</h4>
@@ -441,32 +459,6 @@ function ReviewConfirmDialog({ open, result, filename, onClose, onImportSuccess 
                     </div>
                   )}
                 </div>
-
-                {/* Master Template Toggle */}
-                <TooltipProvider>
-                  <div className="flex items-center gap-3 p-3 border rounded-lg bg-muted/30">
-                    <Switch
-                      id="master-template"
-                      checked={isMasterTemplate}
-                      onCheckedChange={setIsMasterTemplate}
-                    />
-                    <div className="flex-1">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Label htmlFor="master-template" className="text-sm font-medium cursor-pointer underline decoration-dotted">
-                            Set as master design template
-                          </Label>
-                        </TooltipTrigger>
-                        <TooltipContent side="top" className="max-w-xs">
-                          When enabled, this template will be saved as the default starting point for all new label designs. You can change the master template at any time from the Zones page.
-                        </TooltipContent>
-                      </Tooltip>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        Mark this template as the default for new label designs
-                      </p>
-                    </div>
-                  </div>
-                </TooltipProvider>
 
               </div>
             </ScrollArea>

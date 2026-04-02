@@ -1478,6 +1478,12 @@ export default function Zones() {
                       <div className="flex items-start gap-3">
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 mb-1">
+                            {designSystem?.masterTemplateId === template.id && (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-amber-700 bg-amber-100 dark:bg-amber-900/40 dark:text-amber-400 px-1.5 py-0.5 rounded">
+                                <Sparkles className="w-2.5 h-2.5" />
+                                Master
+                              </span>
+                            )}
                             {template.parentTemplateId && (
                               <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
                                 Child
