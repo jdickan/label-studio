@@ -651,6 +651,8 @@ function DesignCanvas({
   onUpdateObj,
   onStartEdit,
   editingId,
+  bgImageUrl,
+  bgImageVisible,
 }: {
   objects: DesignObj[];
   selectedId: string | null;
@@ -665,6 +667,8 @@ function DesignCanvas({
   onUpdateObj: (id: string, patch: Partial<DesignObj>) => void;
   onStartEdit: (id: string) => void;
   editingId: string | null;
+  bgImageUrl?: string | null;
+  bgImageVisible?: boolean;
 }) {
   const canvasRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<DragState | null>(null);
@@ -810,6 +814,26 @@ function DesignCanvas({
             zIndex: 0,
           }}
         />
+
+        {/* Reference background image underlay — editor only, not saved */}
+        {bgImageUrl && bgImageVisible && (
+          <img
+            src={bgImageUrl}
+            alt="Background reference"
+            style={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "fill",
+              opacity: 0.45,
+              pointerEvents: "none",
+              zIndex: 0,
+              userSelect: "none",
+            }}
+            draggable={false}
+          />
+        )}
 
       {/* Objects */}
       {objects.map((obj) => {
@@ -967,6 +991,10 @@ export default function Designs() {
   const [selectedSheetId, setSelectedSheetId] = useState("none");
   const [isDirty, setIsDirty] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [bgImageUrl, setBgImageUrl] = useState<string | null>(null);
+  const [bgImageVisible, setBgImageVisible] = useState(true);
+  const bgImageObjectUrl = useRef<string | null>(null);
+  const bgFileInputRef = useRef<HTMLInputElement>(null);
 
   const selectedObj = objects.find((o) => o.id === selectedId) ?? null;
   const activeDesign = allDesigns.find((d) => d.id === activeDesignId) ?? null;
@@ -1037,7 +1065,28 @@ export default function Designs() {
     };
   }
 
+  function clearBgImage() {
+    if (bgImageObjectUrl.current) {
+      URL.revokeObjectURL(bgImageObjectUrl.current);
+      bgImageObjectUrl.current = null;
+    }
+    setBgImageUrl(null);
+    setBgImageVisible(true);
+  }
+
+  function handleBgImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (bgImageObjectUrl.current) URL.revokeObjectURL(bgImageObjectUrl.current);
+    const url = URL.createObjectURL(file);
+    bgImageObjectUrl.current = url;
+    setBgImageUrl(url);
+    setBgImageVisible(true);
+    e.target.value = "";
+  }
+
   function loadDesign(design: LabelDesign) {
+    clearBgImage();
     setActiveDesignId(design.id);
     const rawObjects = Array.isArray(design.objects) ? design.objects as Record<string, unknown>[] : [];
     setObjects(rawObjects.map(normaliseObject));
@@ -1049,6 +1098,7 @@ export default function Designs() {
   }
 
   function exitEditingMode() {
+    clearBgImage();
     setEditingMode(false);
     setActiveDesignId(null);
     setObjects([]);
@@ -1322,6 +1372,8 @@ export default function Designs() {
               onUpdateObj={updateObj}
               onStartEdit={setEditingId}
               editingId={editingId}
+              bgImageUrl={bgImageUrl}
+              bgImageVisible={bgImageVisible}
             />
           </div>
         </div>
@@ -1354,6 +1406,47 @@ export default function Designs() {
           ) : (
             <span>{labelW}″ × {labelH}″ label</span>
           )}
+
+          {/* Background reference image controls */}
+          <div className="flex items-center gap-1 ml-2 pl-2 border-l border-muted-foreground/20">
+            <input
+              ref={bgFileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleBgImageUpload}
+            />
+            <button
+              type="button"
+              title={bgImageUrl ? "Change reference image" : "Upload reference image (editor only)"}
+              onClick={() => bgFileInputRef.current?.click()}
+              className={`flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-muted transition-colors ${bgImageUrl ? "text-blue-600 dark:text-blue-400" : ""}`}
+            >
+              <Image className="w-3 h-3" />
+              <span>{bgImageUrl ? "BG Ref" : "Add BG Ref"}</span>
+            </button>
+            {bgImageUrl && (
+              <>
+                <button
+                  type="button"
+                  title={bgImageVisible ? "Hide reference image" : "Show reference image"}
+                  onClick={() => setBgImageVisible((v) => !v)}
+                  className="p-0.5 rounded hover:bg-muted transition-colors"
+                >
+                  {bgImageVisible ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3 text-muted-foreground" />}
+                </button>
+                <button
+                  type="button"
+                  title="Remove reference image"
+                  onClick={clearBgImage}
+                  className="p-0.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-destructive"
+                >
+                  ×
+                </button>
+              </>
+            )}
+          </div>
+
           <div className="ml-auto flex items-center gap-1">
             <button type="button" onClick={() => setZoom((z) => Math.max(0.25, z - 0.25))} className="p-1 rounded hover:bg-muted transition-colors"><ZoomOut className="w-3.5 h-3.5" /></button>
             <span className="w-10 text-center">{zoomPct}%</span>
