@@ -1360,8 +1360,8 @@ export default function LabelTemplates() {
       {/* Header */}
       <div className="flex justify-between items-center mb-4 shrink-0">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight kern-on">Designs</h1>
-          <p className="text-muted-foreground mt-1">Design zone layouts for your labels.</p>
+          <h1 className="text-3xl font-bold tracking-tight kern-on">Zones</h1>
+          <p className="text-muted-foreground mt-1">Block out zone layouts, assign data hooks, and link label sheets.</p>
         </div>
         <div className="flex gap-2">
           {isEditing && (

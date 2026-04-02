@@ -21,7 +21,7 @@ export default function AppSidebar() {
     { name: "Dashboard",  href: "/dashboard",        icon: Home           },
     { name: "Print Jobs", href: "/print-jobs",        icon: Printer        },
     { name: "Products",   href: "/products",          icon: Droplets       },
-    { name: "Designs",    href: "/label-templates",   icon: LayoutTemplate },
+    { name: "Zones",      href: "/zones",              icon: LayoutTemplate },
     { name: "Sheets",     href: "/label-sheets",      icon: Layers         },
   ];
 
