@@ -558,49 +558,33 @@ export default function PrintJobs() {
     const sheetEls = previewRef.current?.querySelectorAll<HTMLElement>("[data-sheet-page]");
     if (!sheetEls || sheetEls.length === 0) return [];
 
-    const resolveOklchVars = (clonedDoc: Document) => {
-      const probe = document.createElement("div");
-      probe.style.position = "absolute";
-      probe.style.visibility = "hidden";
-      document.body.appendChild(probe);
-      const overrides: string[] = [];
-      try {
-        for (const sheet of Array.from(document.styleSheets)) {
-          let rules: CSSRuleList;
-          try { rules = sheet.cssRules; } catch { continue; }
-          for (const rule of Array.from(rules)) {
-            if (!(rule instanceof CSSStyleRule)) continue;
-            for (let i = 0; i < rule.style.length; i++) {
-              const prop = rule.style[i];
-              const val = rule.style.getPropertyValue(prop);
-              if (val.includes("oklch")) {
-                probe.style.setProperty("color", `var(${prop})`);
-                const computed = getComputedStyle(probe).color;
-                if (computed && computed !== "") {
-                  overrides.push(`${prop}: ${computed}`);
-                }
-              }
-            }
-          }
-        }
-      } finally {
-        document.body.removeChild(probe);
-      }
-      if (overrides.length > 0) {
-        const style = clonedDoc.createElement("style");
-        style.textContent = `:root { ${overrides.join("; ")} }`;
-        clonedDoc.head.appendChild(style);
-      }
-    };
-
     const images: string[] = [];
     for (const el of Array.from(sheetEls)) {
-      const canvas = await html2canvas(el, {
+      const clone = el.cloneNode(true) as HTMLElement;
+      const walk = (node: Node) => {
+        if (node.nodeType === Node.ELEMENT_NODE) {
+          const elem = node as HTMLElement;
+          const computed = getComputedStyle(elem);
+          if (computed.color && computed.color !== "rgba(0, 0, 0, 0)") {
+            elem.style.color = computed.color;
+          }
+          if (computed.backgroundColor && computed.backgroundColor !== "rgba(0, 0, 0, 0)") {
+            elem.style.backgroundColor = computed.backgroundColor;
+          }
+          if (computed.borderColor && computed.borderColor !== "rgba(0, 0, 0, 0)") {
+            elem.style.borderColor = computed.borderColor;
+          }
+          for (let i = 0; i < node.childNodes.length; i++) {
+            walk(node.childNodes[i]);
+          }
+        }
+      };
+      walk(clone);
+      const canvas = await html2canvas(clone, {
         scale: 2,
         useCORS: true,
         backgroundColor: "#ffffff",
         logging: false,
-        onclone: resolveOklchVars,
       });
       images.push(canvas.toDataURL("image/png"));
     }
