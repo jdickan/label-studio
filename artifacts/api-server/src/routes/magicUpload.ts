@@ -47,6 +47,7 @@ interface DetectedZone {
   color: string;
   fontSize: number;
   textAlign: "left" | "center" | "right";
+  rotation: number;
   maxChars: number;
 }
 
@@ -150,7 +151,8 @@ Analyze the uploaded label image and return a JSON object with ALL of these fiel
       "h": number,            // zone height as 0-1 fraction
       "color": string,        // dominant background hex of this zone
       "fontSize": number,     // estimated relative font size 6-24
-      "textAlign": "left" | "center" | "right"
+      "textAlign": "left" | "center" | "right",
+      "rotation": number      // text rotation in degrees (0, 90, -90, 180, or best estimate); 0 if horizontal, 90 if rotated clockwise, -90 if counter-clockwise
     }
   ],
   "brandName": string,        // brand/company name text if visible, else ""
@@ -168,6 +170,8 @@ Rules:
 - Always include a "product-name" zone — it is required
 - x, y, w, h MUST be 0.0–1.0 fractions
 - Identify ALL distinct zones (typically 5-12)
+- Only mark zones as "photo-area" or "logo-area" if they contain actual images or graphics (not blank space or placeholder text)
+- For text zones, estimate rotation: 0° for horizontal, 90° for clockwise vertical, -90° for counter-clockwise vertical
 - Return ONLY the JSON object, no markdown, no explanation, no code fences`;
 
 async function runAnalysis(jobId: string, filename: string, buffer: Buffer, mimeType: string) {
@@ -285,6 +289,7 @@ async function runAnalysis(jobId: string, filename: string, buffer: Buffer, mime
           color: typeof z.color === "string" ? z.color : "#ffffff",
           fontSize: Math.max(6, Math.min(32, typeof z.fontSize === "number" ? z.fontSize : 10)),
           textAlign: (["left", "center", "right"].includes(z.textAlign as string) ? z.textAlign : "left") as "left" | "center" | "right",
+          rotation: typeof z.rotation === "number" ? Math.round(z.rotation) : 0,
         };
         return { ...partial, maxChars: maxChars(partial) };
       });
