@@ -280,33 +280,22 @@ function ReviewConfirmDialog({ open, result, filename, onClose, onImportSuccess 
                     className="w-32 h-auto rounded-lg border object-contain bg-muted"
                     style={{ maxHeight: 128 }}
                   />
-                  <div className="flex-1 space-y-1">
-                    <p className="text-sm font-medium truncate">{filename}</p>
+                  <div className="flex-1 space-y-2">
+                    <div className="space-y-1">
+                      <Label className="text-xs font-semibold">Template Name</Label>
+                      <Input
+                        value={templateName}
+                        onChange={(e) => setTemplateName(e.target.value)}
+                        className="text-sm"
+                        placeholder="e.g., Candle Label – 4oz"
+                      />
+                    </div>
                     <div className="flex flex-wrap gap-2">
                       <Badge variant="secondary">{result.layoutPattern.replace(/_/g, " ")}</Badge>
                       <Badge variant="secondary">{result.aestheticTag}</Badge>
                       <Badge variant="secondary">{result.fontStyle} font</Badge>
                     </div>
                     <p className="text-xs text-muted-foreground">{result.zones.length} zones detected</p>
-                  </div>
-                </div>
-
-                {/* Master Template — prominent top-of-form decision */}
-                <div className={`flex items-start gap-3 p-4 rounded-lg border-2 transition-colors ${isMasterTemplate ? "border-amber-400 bg-amber-50 dark:bg-amber-950/30" : "border-border bg-muted/30 hover:border-primary/40"}`}>
-                  <Switch
-                    id="master-template"
-                    checked={isMasterTemplate}
-                    onCheckedChange={setIsMasterTemplate}
-                    className="mt-0.5"
-                  />
-                  <div className="flex-1">
-                    <Label htmlFor="master-template" className="text-sm font-semibold cursor-pointer flex items-center gap-2">
-                      <Sparkles className={`w-4 h-4 ${isMasterTemplate ? "text-amber-500" : "text-muted-foreground"}`} />
-                      Set as master design template
-                    </Label>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      The master template is the default starting point for all new label designs. When you create labels for other product types, this zone layout will be used as the reference. You can update it at any time from the Zones page.
-                    </p>
                   </div>
                 </div>
 
@@ -357,7 +346,7 @@ function ReviewConfirmDialog({ open, result, filename, onClose, onImportSuccess 
                 {/* Zones */}
                 <div className="space-y-2">
                   <h4 className="text-sm font-semibold">Detected Zones</h4>
-                  <div className="space-y-2 max-h-48 overflow-y-auto border rounded-md p-2">
+                  <div className="space-y-2 border rounded-md p-2">
                     {result.zones.map((zone) => (
                       <div key={zone.id} className="flex items-center gap-3 text-sm">
                         <Switch
@@ -462,6 +451,25 @@ function ReviewConfirmDialog({ open, result, filename, onClose, onImportSuccess 
 
               </div>
             </ScrollArea>
+
+            {/* Master Template — decision right before submit */}
+            <div className={`mx-4 mb-4 flex items-start gap-3 p-4 rounded-lg border-2 transition-colors ${isMasterTemplate ? "border-amber-400 bg-amber-50 dark:bg-amber-950/30" : "border-border bg-muted/30 hover:border-primary/40"}`}>
+              <Switch
+                id="master-template"
+                checked={isMasterTemplate}
+                onCheckedChange={setIsMasterTemplate}
+                className="mt-0.5"
+              />
+              <div className="flex-1">
+                <Label htmlFor="master-template" className="text-sm font-semibold cursor-pointer flex items-center gap-2">
+                  <Sparkles className={`w-4 h-4 ${isMasterTemplate ? "text-amber-500" : "text-muted-foreground"}`} />
+                  Set as master design template
+                </Label>
+                <p className="text-xs text-muted-foreground mt-1">
+                  The master template is the default starting point for all new label designs. You can update it at any time from the Zones page.
+                </p>
+              </div>
+            </div>
 
             <DialogFooter className="pt-2 border-t">
               <Button variant="ghost" onClick={onClose} disabled={importing}>Cancel</Button>
