@@ -20,8 +20,6 @@ import {
   Plus,
   Trash2,
   Pencil,
-  Check,
-  X,
   Type,
   Square,
   Circle,
@@ -445,18 +443,19 @@ function TopToolbar({
         })}
       </div>
 
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1.5">
         <span className="text-xs text-muted-foreground">Spacing</span>
         <input
-          type="number"
+          type="range"
           value={t.letterSpacing}
           step={0.01}
           min={-0.2}
           max={1}
           onChange={(e) => onUpdate(t.id, { letterSpacing: Number(e.target.value) } as Partial<DesignObj>)}
-          className="h-7 w-16 border rounded text-xs px-1.5 bg-background"
-          title="Letter spacing (em)"
+          className="w-20 accent-primary"
+          title={`Letter spacing: ${t.letterSpacing.toFixed(2)}em`}
         />
+        <span className="text-xs w-8 text-muted-foreground">{t.letterSpacing.toFixed(2)}</span>
       </div>
 
       <ColorSwatch value={t.color} onChange={(v) => onUpdate(t.id, { color: v } as Partial<DesignObj>)} />
@@ -503,8 +502,8 @@ function PropertiesPanel({
             <input type="number" value={t.fontSize} min={6} max={200} onChange={(e) => onUpdate(t.id, { fontSize: Number(e.target.value) } as Partial<DesignObj>)} className="h-7 w-full border rounded px-1.5 bg-background text-xs" />
           </div>
           <div className="flex-1">
-            <Label className="text-[10px] text-muted-foreground mb-0.5 block">Spacing</Label>
-            <input type="number" value={t.letterSpacing} step={0.01} min={-0.2} max={1} onChange={(e) => onUpdate(t.id, { letterSpacing: Number(e.target.value) } as Partial<DesignObj>)} className="h-7 w-full border rounded px-1.5 bg-background text-xs" />
+            <Label className="text-[10px] text-muted-foreground mb-0.5 block">Spacing <span className="text-foreground">{t.letterSpacing.toFixed(2)}</span></Label>
+            <input type="range" value={t.letterSpacing} step={0.01} min={-0.2} max={1} onChange={(e) => onUpdate(t.id, { letterSpacing: Number(e.target.value) } as Partial<DesignObj>)} className="w-full accent-primary" />
           </div>
         </div>
 
@@ -748,10 +747,10 @@ function DesignCanvas({
     } else {
       let { origX: x, origY: y, origW: w, origH: h } = drag;
       const handle = drag.handle!;
-      if (handle.includes("r")) { w = Math.max(MIN_SIZE, drag.origW + dx); }
-      if (handle.includes("l")) { const nw = Math.max(MIN_SIZE, drag.origW - dx); x = drag.origX + drag.origW - nw; w = nw; }
-      if (handle.includes("b")) { h = Math.max(MIN_SIZE, drag.origH + dy); }
-      if (handle.includes("t")) { const nh = Math.max(MIN_SIZE, drag.origH - dy); y = drag.origY + drag.origH - nh; h = nh; }
+      if (handle.includes("r")) { w = Math.min(Math.max(MIN_SIZE, drag.origW + dx), labelW - x); }
+      if (handle.includes("l")) { const nw = Math.min(Math.max(MIN_SIZE, drag.origW - dx), drag.origX + drag.origW); x = clamp(drag.origX + drag.origW - nw, 0, drag.origX + drag.origW - MIN_SIZE); w = drag.origX + drag.origW - x; }
+      if (handle.includes("b")) { h = Math.min(Math.max(MIN_SIZE, drag.origH + dy), labelH - y); }
+      if (handle.includes("t")) { const nh = Math.min(Math.max(MIN_SIZE, drag.origH - dy), drag.origY + drag.origH); y = clamp(drag.origY + drag.origH - nh, 0, drag.origY + drag.origH - MIN_SIZE); h = drag.origY + drag.origH - y; }
       onUpdateObj(drag.objId, { x, y, w, h } as Partial<DesignObj>);
     }
   }
