@@ -6,7 +6,7 @@ import { promisify } from "util";
 import { writeFile, readFile, rm, mkdtemp } from "fs/promises";
 import { join } from "path";
 import { tmpdir } from "os";
-import { db, labelTemplatesTable, designSystemTable } from "@workspace/db";
+import { db, labelTemplatesTable, designSystemTable, labelSheetsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 
 const execAsync = promisify(exec);
@@ -489,12 +489,52 @@ router.post("/import", async (req, res) => {
       return;
     }
 
+    // Find or create a label sheet matching the detected dimensions
+    const w = dimensions?.widthInches ?? 4;
+    const h = dimensions?.heightInches ?? 2;
+    const TOLERANCE = 0.1; // inches
+
+    let labelSheetId: number | undefined;
+    try {
+      const allSheets = await db.select().from(labelSheetsTable);
+      const match = allSheets.find(
+        (s) => Math.abs(s.labelWidth - w) <= TOLERANCE && Math.abs(s.labelHeight - h) <= TOLERANCE
+      );
+      if (match) {
+        labelSheetId = match.id;
+      } else {
+        // Create a custom 1-up sheet with the detected dimensions
+        const margin = 0.25;
+        const [newSheet] = await db.insert(labelSheetsTable).values({
+          name: `${w}" × ${h}" Custom Label`,
+          brand: "Custom",
+          code: `CUSTOM-${w}x${h}`.replace(/\./g, "_"),
+          pageWidth: w + margin * 2,
+          pageHeight: h + margin * 2,
+          labelWidth: w,
+          labelHeight: h,
+          labelsAcross: 1,
+          labelsDown: 1,
+          topMargin: margin,
+          leftMargin: margin,
+          horizontalGap: 0,
+          verticalGap: 0,
+          shape: "rectangle",
+          isCustom: true,
+        }).returning();
+        labelSheetId = newSheet?.id;
+      }
+    } catch {
+      // Non-fatal — template will just have no sheet linked
+    }
+
     // Create label template
     const [template] = await db.insert(labelTemplatesTable).values({
       name: templateName,
-      description: `Magic Import — ${productType ?? "unknown"} label, ${dimensions?.widthInches ?? 4}" × ${dimensions?.heightInches ?? 2}"`,
+      description: `Magic Import — ${productType ?? "unknown"} label, ${w}" × ${h}"`,
       zones: zones ?? [],
       labelBgColor: backgroundColor ?? "#ffffff",
+      labelSheetId: labelSheetId ?? null,
     }).returning();
 
     // Patch design system

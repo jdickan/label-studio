@@ -256,12 +256,12 @@ function ReviewConfirmDialog({ open, result, filename, onClose, onImportSuccess 
             </div>
             <div className="flex gap-3">
               <Button asChild variant="default">
-                <Link href={`/zones?template=${success.templateId}`}>
+                <Link href={`/zones`}>
                   <LayoutTemplate className="w-4 h-4 mr-2" /> View Zone Template
                 </Link>
               </Button>
               <Button asChild variant="outline">
-                <Link href="/branding">
+                <Link href="/design-system">
                   <ExternalLink className="w-4 h-4 mr-2" /> Branding Page
                 </Link>
               </Button>
