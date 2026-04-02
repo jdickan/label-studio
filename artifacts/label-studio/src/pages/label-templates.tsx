@@ -29,6 +29,7 @@ import {
   Circle, Loader2, ChevronDown, ChevronUp, AlertCircle, X,
   AlignLeft, AlignCenter, AlignRight, ImagePlus, Columns2,
   Eye, RotateCcw, AlignStartVertical, AlignCenterVertical, AlignEndVertical,
+  Bookmark, BookmarkCheck, Sparkles,
 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
@@ -85,6 +86,58 @@ const DEFAULT_ASPECT = 4.75 / 1.25;
 const DEFAULT_IMAGE_SAFE_INSET = 0.03;   // fallback 3% when no sheet linked
 const DEFAULT_TEXT_SAFE_INSET  = 0.06;   // fallback 6%
 const SNAP_THRESHOLD           = 0.025;  // within 2.5% → snap to guide
+
+// ─── Default layout (anchored starter) ────────────────────────────────────────
+// All coordinates are normalised 0–1 relative to label dimensions, so the
+// layout automatically adapts to any label size when applied.
+
+const DEFAULT_LAYOUT_KEY = "label_studio_default_zone_layout";
+
+/**
+ * Built-in starter layout.  Anchors:
+ *  • logo      → top-left  (respects ~5% text-safe inset)
+ *  • brand     → top strip, right of logo
+ *  • product   → upper-mid, full width
+ *  • scent     → mid strip, full width
+ *  • photo     → right 40% of label
+ *  • weight    → bottom-left
+ *  • website   → bottom-right
+ */
+const BUILT_IN_STARTER: Omit<LabelZone, "id" | "maxChars">[] = [
+  { role: "logo-area",      x: 0.04, y: 0.04, w: 0.22, h: 0.30, color: "#ffffff", fontSize: 10, textAlign: "left"   },
+  { role: "brand-name",     x: 0.28, y: 0.04, w: 0.30, h: 0.14, color: "#ffffff", fontSize: 13, textAlign: "left",   text: "" },
+  { role: "product-name",   x: 0.04, y: 0.36, w: 0.54, h: 0.22, color: "#ffffff", fontSize: 16, textAlign: "left",   text: "" },
+  { role: "scent-notes",    x: 0.04, y: 0.60, w: 0.54, h: 0.15, color: "#ffffff", fontSize: 10, textAlign: "left",   text: "", lineHeight: 1.3 },
+  { role: "photo-area",     x: 0.60, y: 0.00, w: 0.40, h: 1.00, color: "#ffffff", fontSize: 10, textAlign: "left"   },
+  { role: "weight-volume",  x: 0.04, y: 0.80, w: 0.28, h: 0.14, color: "#ffffff", fontSize: 10, textAlign: "left",   text: "" },
+  { role: "website",        x: 0.36, y: 0.80, w: 0.22, h: 0.14, color: "#ffffff", fontSize:  9, textAlign: "right",  text: "" },
+];
+
+function saveDefaultLayout(zones: LabelZone[]): void {
+  try {
+    localStorage.setItem(DEFAULT_LAYOUT_KEY, JSON.stringify(zones));
+  } catch { /* quota / private mode */ }
+}
+
+function loadDefaultLayout(): LabelZone[] | null {
+  try {
+    const raw = localStorage.getItem(DEFAULT_LAYOUT_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed) || parsed.length === 0) return null;
+    return parsed as LabelZone[];
+  } catch { return null; }
+}
+
+function hasDefaultLayout(): boolean {
+  try { return !!localStorage.getItem(DEFAULT_LAYOUT_KEY); }
+  catch { return false; }
+}
+
+/** Re-stamp each zone with a fresh ID so there are no collisions. */
+function stampNewIds(zones: Omit<LabelZone, "id" | "maxChars">[]): LabelZone[] {
+  return zones.map(z => withMaxChars({ ...z, id: crypto.randomUUID() }));
+}
 
 /** Snap a zone edge pair to the nearest guide candidate. */
 function snapEdge(pos: number, size: number, guides: number[], thresh: number): number {
@@ -477,7 +530,7 @@ function ZoneCanvas({ zones, selectedId, onSelect, onChange, onBeforeDrag, image
                     color: fgColor,
                     textAlign: zone.textAlign as "left" | "center" | "right",
                     padding: `${pad}px ${pad * 1.4}px`,
-                    lineHeight: 1.35,
+                    lineHeight: zone.lineHeight ?? 1.2,
                     display: "flex",
                     alignItems: textAlignYItems,
                     justifyContent: zone.textAlign === "center" ? "center" : zone.textAlign === "right" ? "flex-end" : "flex-start",
@@ -503,7 +556,7 @@ function ZoneCanvas({ zones, selectedId, onSelect, onChange, onBeforeDrag, image
                     color: fgColor,
                     textAlign: zone.textAlign as "left" | "center" | "right",
                     padding: `${pad}px ${pad * 1.4}px`,
-                    lineHeight: 1.35,
+                    lineHeight: zone.lineHeight ?? 1.2,
                     wordBreak: "break-word",
                     whiteSpace: "pre-wrap",
                     boxShadow: "inset 0 0 0 1.5px #2563eb",
@@ -1000,11 +1053,29 @@ export default function LabelTemplates() {
   const [showPreview, setShowPreview] = useState(false);
   const [labelBgColor, setLabelBgColor] = useState<string>("");
   const [rightPanelTab, setRightPanelTab] = useState<"zone" | "label" | "zones">("zones");
+  const [hasMyDefault, setHasMyDefault] = useState(hasDefaultLayout);
 
   const undoRef = useRef<LabelZone[] | null>(null);
   const saveUndo = useCallback(() => {
     undoRef.current = zones;
   }, [zones]);
+
+  const handleSaveAsDefault = useCallback(() => {
+    if (zones.length === 0) return;
+    saveDefaultLayout(zones);
+    setHasMyDefault(true);
+    toast({ title: "Default layout saved", description: "Apply it when designing any new template." });
+  }, [zones, toast]);
+
+  const handleApplyLayout = useCallback((source: "my" | "starter") => {
+    const newZones = source === "my"
+      ? (() => { const saved = loadDefaultLayout(); return saved ? stampNewIds(saved) : null; })()
+      : stampNewIds(BUILT_IN_STARTER);
+    if (!newZones) return;
+    saveUndo();
+    setZones(newZones);
+    toast({ title: source === "my" ? "Your default layout applied" : "Starter layout applied", description: "Zones added — adjust and save." });
+  }, [saveUndo, toast]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -1227,6 +1298,15 @@ export default function LabelTemplates() {
             <>
               <Button variant="outline" size="sm" onClick={() => setShowPreview(true)}>
                 <Eye className="w-4 h-4 mr-1" /> Preview
+              </Button>
+              <Button
+                variant="outline" size="sm"
+                onClick={handleSaveAsDefault}
+                disabled={zones.length === 0}
+                title="Save the current zone layout as your default — apply it to any new template"
+              >
+                {hasMyDefault ? <BookmarkCheck className="w-4 h-4 mr-1" /> : <Bookmark className="w-4 h-4 mr-1" />}
+                Save as Default
               </Button>
               <Button variant="outline" size="sm" onClick={handleAddZone}>
                 <Plus className="w-4 h-4 mr-1" /> Add Zone
@@ -1563,7 +1643,19 @@ export default function LabelTemplates() {
                     <TabsContent value="zones" className="flex-1 overflow-y-auto mt-0 data-[state=inactive]:hidden">
                       <div className="p-4 flex flex-col gap-2">
                         {zones.length === 0 && (
-                          <p className="text-xs text-muted-foreground">No zones yet. Upload a label or click "Add Zone".</p>
+                          <div className="flex flex-col gap-2 mb-1">
+                            <p className="text-xs text-muted-foreground">No zones yet. Start from a layout or click "Add Zone".</p>
+                            {hasMyDefault && (
+                              <Button size="sm" variant="outline" className="w-full justify-start text-xs" onClick={() => handleApplyLayout("my")}>
+                                <BookmarkCheck className="w-3.5 h-3.5 mr-1.5 text-primary" />
+                                Apply my saved default layout
+                              </Button>
+                            )}
+                            <Button size="sm" variant="outline" className="w-full justify-start text-xs" onClick={() => handleApplyLayout("starter")}>
+                              <Sparkles className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />
+                              Apply built-in starter layout
+                            </Button>
+                          </div>
                         )}
                         {REQUIRED_ROLES.filter(role => !zones.some(z => z.role === role)).map(role => (
                           <div key={role} className="flex items-center gap-2 px-2.5 py-1.5 rounded-md border border-dashed border-destructive/50 bg-destructive/5 text-xs">

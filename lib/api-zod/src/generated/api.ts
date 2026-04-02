@@ -59,7 +59,7 @@ export const CreateLabelTemplateBody = z.object({
   name: z.string(),
   labelSheetId: z.number().optional(),
   zones: z.array(z.any()).optional(),
-  labelBgColor: z.string().optional(),
+  labelBgColor: z.string().nullable().optional(),
   notes: z.string().optional(),
 }).passthrough();
 
