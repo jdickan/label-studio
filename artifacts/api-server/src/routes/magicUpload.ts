@@ -563,22 +563,20 @@ router.post("/import", async (req, res) => {
     let design = null;
     if (isMasterTemplate && template) {
       try {
-        // Design editor uses 96 PPI pixel coordinates
-        const PPI = 96;
-        // Generate design objects from zones in the format the Designs editor expects
+        // Design editor stores x/y/w/h in INCHES (it multiplies by PPI internally for rendering)
+        // Zone fractions (0‒1) × label size in inches = position in inches
         const designObjects = (zones ?? []).map((zone) => {
           const isImage = zone.role === "photo-area" || zone.role === "logo-area";
-          const xPx = (zone.x ?? 0) * w * PPI;
-          const yPx = (zone.y ?? 0) * h * PPI;
-          const wPx = Math.max(10, (zone.w ?? 0.2) * w * PPI);
-          const hPx = Math.max(10, (zone.h ?? 0.1) * h * PPI);
+          const xIn = (zone.x ?? 0) * w;
+          const yIn = (zone.y ?? 0) * h;
+          const wIn = Math.max(0.05, (zone.w ?? 0.2) * w);
+          const hIn = Math.max(0.05, (zone.h ?? 0.1) * h);
 
           if (isImage) {
-            // Render image/logo zones as filled rectangles
             return {
               id: randomUUID(),
               type: "rect",
-              x: xPx, y: yPx, w: wPx, h: hPx,
+              x: xIn, y: yIn, w: wIn, h: hIn,
               locked: false, visible: true,
               fill: "#e5e7eb",
               stroke: "#9ca3af",
@@ -586,11 +584,10 @@ router.post("/import", async (req, res) => {
               borderRadius: 0,
             };
           }
-          // Text zone — match the TextObj interface exactly
           return {
             id: randomUUID(),
             type: "text",
-            x: xPx, y: yPx, w: wPx, h: hPx,
+            x: xIn, y: yIn, w: wIn, h: hIn,
             locked: false, visible: true,
             content: zone.text || `[${String(zone.role).replace(/-/g, " ")}]`,
             fontFamily: "Arial",

@@ -1001,12 +1001,18 @@ export default function Designs() {
 
   function normaliseObject(raw: Record<string, unknown>): DesignObj {
     const type = raw.type as string;
+    // x/y/w/h must be in INCHES for the canvas renderer (px() = inches * PPI * zoom).
+    // Old imports mistakenly stored pixel values. Heuristic: if w > 5 it's almost
+    // certainly pixels (no production label is >5 inches wide), so divide by PPI.
+    const PPI_NORM = 96;
+    const rawW = (raw.w as number) ?? (raw.width as number) ?? PPI_NORM;
+    const toIn = rawW > 5 ? (v: number) => v / PPI_NORM : (v: number) => v;
     const base: ObjBase = {
       id: (raw.id as string) ?? crypto.randomUUID(),
-      x: (raw.x as number) ?? 0,
-      y: (raw.y as number) ?? 0,
-      w: (raw.w as number) ?? (raw.width as number) ?? 1,
-      h: (raw.h as number) ?? (raw.height as number) ?? 0.5,
+      x: toIn((raw.x as number) ?? 0),
+      y: toIn((raw.y as number) ?? 0),
+      w: Math.max(0.05, toIn(rawW)),
+      h: Math.max(0.05, toIn((raw.h as number) ?? (raw.height as number) ?? PPI_NORM * 0.5)),
       locked: (raw.locked as boolean) ?? false,
       visible: (raw.visible as boolean) ?? true,
     };
