@@ -787,12 +787,15 @@ export default function PrintJobs() {
               {/* Label Design */}
               <div className="space-y-2">
                 <Label>Label Design</Label>
-                <Select value={formData.labelTemplateId} onValueChange={v => setFormData(p => ({ ...p, labelTemplateId: v }))}>
+                <Select
+                  value={formData.labelTemplateId || "none"}
+                  onValueChange={v => setFormData(p => ({ ...p, labelTemplateId: v === "none" ? "" : v }))}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="No design — plain text fallback" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No design (plain text)</SelectItem>
+                    <SelectItem value="none">No design (plain text)</SelectItem>
                     {templates?.map(t => (
                       <SelectItem key={t.id} value={t.id.toString()}>{t.name}</SelectItem>
                     ))}
