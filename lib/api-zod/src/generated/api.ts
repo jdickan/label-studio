@@ -61,6 +61,7 @@ export const CreateLabelTemplateBody = z.object({
   zones: z.array(z.any()).optional(),
   labelBgColor: z.string().nullable().optional(),
   notes: z.string().optional(),
+  parentTemplateId: z.number().nullable().optional(),
 }).passthrough();
 
 export const UpdateLabelTemplateBody = CreateLabelTemplateBody.partial();

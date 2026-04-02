@@ -162,6 +162,8 @@ export interface LabelZone {
   textAlignY?: "top" | "middle" | "bottom";
   /** Line height multiplier for wrapped text (default: 1.2) */
   lineHeight?: number;
+  /** True if this zone was inherited from a parent template (and not locally overridden) */
+  inheritedFromParent?: boolean;
 }
 
 export type LabelZoneAnalysisResultBrandMatches = { [key: string]: string };
@@ -184,6 +186,8 @@ export interface LabelTemplate {
   safeAreaInches: number;
   /** CSS colour for the label canvas background (null / empty = transparent) */
   labelBgColor?: string | null;
+  /** Parent template ID for inheritance hierarchy (null = top-level) */
+  parentTemplateId?: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -199,6 +203,7 @@ export interface CreateLabelTemplateBody {
   bleedInches?: number;
   safeAreaInches?: number;
   labelBgColor?: string | null;
+  parentTemplateId?: number | null;
 }
 
 export interface UpdateLabelTemplateBody {
@@ -212,6 +217,7 @@ export interface UpdateLabelTemplateBody {
   bleedInches?: number;
   safeAreaInches?: number;
   labelBgColor?: string | null;
+  parentTemplateId?: number | null;
 }
 
 export interface DesignSystem {

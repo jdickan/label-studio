@@ -29,7 +29,7 @@ import {
   Circle, Loader2, ChevronDown, ChevronUp, AlertCircle, X,
   AlignLeft, AlignCenter, AlignRight, ImagePlus, Columns2,
   Eye, RotateCcw, AlignStartVertical, AlignCenterVertical, AlignEndVertical,
-  Bookmark, BookmarkCheck, Sparkles,
+  Bookmark, BookmarkCheck, Sparkles, ChevronRight, Link2, Unlink, GitBranch,
 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
@@ -608,6 +608,18 @@ function ZoneCanvas({ zones, selectedId, onSelect, onChange, onBeforeDrag, image
                   <div className="absolute bottom-0 left-0 w-2 h-2 rounded-full" style={{ background: "#2563eb", margin: "0 0 -1px -1px" }} />
                 </>
               )}
+
+              {/* Inherited zone badge */}
+              {zone.inheritedFromParent && !readOnly && (
+                <div
+                  className="absolute top-0.5 right-0.5 flex items-center pointer-events-none"
+                  style={{ zIndex: 50 }}
+                >
+                  <div className="rounded px-1 py-0.5 flex items-center gap-0.5" style={{ background: "rgba(37,99,235,0.18)", backdropFilter: "blur(2px)" }}>
+                    <Link2 style={{ width: 7, height: 7, color: "#2563eb" }} />
+                  </div>
+                </div>
+              )}
             </div>
           );
         })}
@@ -687,6 +699,22 @@ function ZonePanel({ zone, onChange, onDelete, brandFields, designSystem }: Zone
           <Trash2 className="w-3.5 h-3.5" />
         </Button>
       </div>
+
+      {zone.inheritedFromParent && (
+        <div className="flex items-center justify-between rounded-md px-2.5 py-2 bg-blue-50 border border-blue-200 text-blue-700">
+          <div className="flex items-center gap-1.5 text-xs font-medium">
+            <Link2 className="w-3.5 h-3.5 shrink-0" />
+            Inherited from parent
+          </div>
+          <Button
+            variant="ghost" size="sm"
+            className="h-6 text-[10px] px-2 text-blue-700 hover:text-blue-900 hover:bg-blue-100"
+            onClick={() => onChange({ ...zone, inheritedFromParent: false })}
+          >
+            <Unlink className="w-3 h-3 mr-1" />Override
+          </Button>
+        </div>
+      )}
 
       <div className="space-y-1.5">
         <Label className="text-xs">Role</Label>
@@ -952,41 +980,56 @@ function ZonePanel({ zone, onChange, onDelete, brandFields, designSystem }: Zone
 
 // ─── TemplateCard ─────────────────────────────────────────────────────────────
 
-function TemplateCard({ template, onClick, active }: { template: LabelTemplate; onClick: () => void; active: boolean }) {
+function TemplateCard({ template, onClick, active, depth = 0 }: { template: LabelTemplate; onClick: () => void; active: boolean; depth?: number }) {
   const rawZones = template.zones;
   const zones: LabelZone[] = isZoneArray(rawZones)
     ? (rawZones as LabelZone[])
     : convertLegacyZones((rawZones ?? {}) as Record<string, unknown>);
 
   const aspect = DEFAULT_ASPECT;
-  const cardW = 200;
+  const cardW = depth > 0 ? 176 : 200;
   const cardH = Math.round(cardW / aspect);
+  const inheritedCount = zones.filter(z => z.inheritedFromParent).length;
 
   return (
-    <button
-      onClick={onClick}
-      className={cn(
-        "text-left rounded-lg border overflow-hidden transition-all hover:shadow-md w-full",
-        active ? "border-primary ring-2 ring-primary/30" : "border-border hover:border-primary/40"
+    <div style={{ paddingLeft: depth * 12 }}>
+      {depth > 0 && (
+        <div className="flex items-center gap-1 mb-0.5 ml-1">
+          <ChevronRight className="w-3 h-3 text-muted-foreground/50 shrink-0" />
+        </div>
       )}
-    >
-      <div className="relative bg-white" style={{ width: cardW, height: cardH }}>
-        {zones.map(z => {
-          const s = ROLE_STYLE[z.role];
-          return (
-            <div
-              key={z.id}
-              className={cn("absolute border", s.bg, s.border)}
-              style={{ left: z.x * cardW, top: z.y * cardH, width: z.w * cardW, height: z.h * cardH }}
-            />
-          );
-        })}
-      </div>
-      <div className="px-2 py-1.5 bg-muted/30 border-t">
-        <p className="text-xs font-medium truncate">{template.name}</p>
-        <p className="text-[10px] text-muted-foreground">{zones.length} zones</p>
-      </div>
-    </button>
+      <button
+        onClick={onClick}
+        className={cn(
+          "text-left rounded-lg border overflow-hidden transition-all hover:shadow-md w-full",
+          active ? "border-primary ring-2 ring-primary/30" : "border-border hover:border-primary/40"
+        )}
+      >
+        <div className="relative bg-white" style={{ width: cardW, height: cardH }}>
+          {zones.map(z => {
+            const s = ROLE_STYLE[z.role];
+            return (
+              <div
+                key={z.id}
+                className={cn("absolute border", s.bg, s.border, z.inheritedFromParent && "opacity-60")}
+                style={{ left: z.x * cardW, top: z.y * cardH, width: z.w * cardW, height: z.h * cardH }}
+              />
+            );
+          })}
+        </div>
+        <div className="px-2 py-1.5 bg-muted/30 border-t">
+          <p className="text-xs font-medium truncate">{template.name}</p>
+          <div className="flex items-center gap-1.5">
+            <p className="text-[10px] text-muted-foreground">{zones.length} zones</p>
+            {inheritedCount > 0 && (
+              <span className="text-[9px] text-muted-foreground/60 flex items-center gap-0.5">
+                <Link2 className="w-2.5 h-2.5" />{inheritedCount} inherited
+              </span>
+            )}
+          </div>
+        </div>
+      </button>
+    </div>
   );
 }
 
@@ -1038,6 +1081,7 @@ export default function LabelTemplates() {
 
   const [mode, setMode] = useState<EditorMode>("idle");
   const [activeTemplateId, setActiveTemplateId] = useState<number | null>(null);
+  const [parentTemplateId, setParentTemplateId] = useState<number | null>(null);
   const [zones, setZones] = useState<LabelZone[]>([]);
   const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState<string | undefined>();
@@ -1054,6 +1098,7 @@ export default function LabelTemplates() {
   const [labelBgColor, setLabelBgColor] = useState<string>("");
   const [rightPanelTab, setRightPanelTab] = useState<"zone" | "label" | "zones">("zones");
   const [hasMyDefault, setHasMyDefault] = useState(hasDefaultLayout);
+  const [cascading, setCascading] = useState(false);
 
   const undoRef = useRef<LabelZone[] | null>(null);
   const saveUndo = useCallback(() => {
@@ -1139,6 +1184,7 @@ export default function LabelTemplates() {
   const loadTemplate = (t: LabelTemplate) => {
     setMode("editing");
     setActiveTemplateId(t.id);
+    setParentTemplateId(t.parentTemplateId ?? null);
     setTemplateName(t.name);
     setTemplateDescription(t.description ?? "");
     setLabelSheetId(t.labelSheetId?.toString() ?? "none");
@@ -1161,6 +1207,7 @@ export default function LabelTemplates() {
   const startNewBlank = () => {
     setMode("creating");
     setActiveTemplateId(null);
+    setParentTemplateId(null);
     setTemplateName("New Template");
     setTemplateDescription("");
     setLabelSheetId("none");
@@ -1250,6 +1297,7 @@ export default function LabelTemplates() {
       zones: zonesWithMaxChars as unknown,
       safeAreaEnabled: showImageSafe || showTextSafe,
       labelBgColor: labelBgColor || null,
+      parentTemplateId: parentTemplateId ?? null,
     };
     if (activeTemplateId) {
       updateMutation.mutate({ id: activeTemplateId, data: payload });
@@ -1273,17 +1321,39 @@ export default function LabelTemplates() {
 
   const handleUpdateZone = useCallback((updated: LabelZone) => {
     saveUndo();
-    setZones(prev => prev.map(z => z.id === updated.id ? withMaxChars(updated) : z));
+    // When a user modifies an inherited zone, automatically mark it as overridden
+    const zone = updated.inheritedFromParent ? { ...updated, inheritedFromParent: false } : updated;
+    setZones(prev => prev.map(z => z.id === zone.id ? withMaxChars(zone) : z));
   }, [saveUndo]);
 
   const handleCancel = () => {
     setMode("idle");
     setActiveTemplateId(null);
+    setParentTemplateId(null);
     setZones([]);
     setSelectedZoneId(null);
     setImageUrl(undefined);
     undoRef.current = null;
   };
+
+  const handleCascade = useCallback(async () => {
+    if (!activeTemplateId) return;
+    setCascading(true);
+    try {
+      const res = await fetch(`/api/label-templates/${activeTemplateId}/cascade`, { method: "POST" });
+      const data = await res.json() as { templatesUpdated: number };
+      queryClient.invalidateQueries({ queryKey: getGetLabelTemplatesQueryKey() });
+      if (data.templatesUpdated === 0) {
+        toast({ title: "No child templates to cascade to" });
+      } else {
+        toast({ title: `Layout cascaded to ${data.templatesUpdated} child template${data.templatesUpdated !== 1 ? "s" : ""}` });
+      }
+    } catch {
+      toast({ title: "Cascade failed", variant: "destructive" });
+    } finally {
+      setCascading(false);
+    }
+  }, [activeTemplateId, toast, queryClient]);
 
   return (
     <div className="flex flex-col h-[calc(100vh-120px)] animate-in fade-in duration-500">
@@ -1317,6 +1387,17 @@ export default function LabelTemplates() {
             <Save className="w-4 h-4 mr-2" />
             {activeTemplateId ? "Save Changes" : "Save Template"}
           </Button>
+          {activeTemplateId && (
+            <Button
+              variant="outline" size="sm"
+              onClick={handleCascade}
+              disabled={cascading}
+              title="Push this template's zone layout down to all child templates"
+            >
+              {cascading ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <GitBranch className="w-4 h-4 mr-1" />}
+              Cascade
+            </Button>
+          )}
         </div>
       </div>
 
@@ -1328,11 +1409,16 @@ export default function LabelTemplates() {
             <div className="text-center text-xs text-muted-foreground p-4 animate-pulse">Loading…</div>
           ) : templates?.length === 0 ? (
             <div className="text-center text-xs text-muted-foreground p-4">No templates yet</div>
-          ) : (
-            templates?.map(t => (
-              <TemplateCard key={t.id} template={t} active={activeTemplateId === t.id} onClick={() => loadTemplate(t)} />
-            ))
-          )}
+          ) : (() => {
+            const tpls = templates ?? [];
+            const childrenOf = (pid: number | null) => tpls.filter(t => (t.parentTemplateId ?? null) === pid);
+            const renderTree = (parentId: number | null, depth: number): JSX.Element[] =>
+              childrenOf(parentId).flatMap(t => [
+                <TemplateCard key={t.id} template={t} active={activeTemplateId === t.id} onClick={() => loadTemplate(t)} depth={depth} />,
+                ...renderTree(t.id, depth + 1),
+              ]);
+            return renderTree(null, 0);
+          })()}
         </div>
 
         {/* Main content area */}
@@ -1554,6 +1640,32 @@ export default function LabelTemplates() {
 
                     <TabsContent value="label" className="flex-1 overflow-y-auto mt-0 data-[state=inactive]:hidden">
                       <div className="p-4 flex flex-col gap-4">
+
+                        <div className="space-y-1.5">
+                          <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Parent Template</Label>
+                          <Select
+                            value={parentTemplateId?.toString() ?? "none"}
+                            onValueChange={v => setParentTemplateId(v === "none" ? null : parseInt(v))}
+                          >
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue placeholder="None (top-level)" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none" className="text-xs">None (top-level)</SelectItem>
+                              {(templates ?? [])
+                                .filter(t => t.id !== activeTemplateId)
+                                .map(t => (
+                                  <SelectItem key={t.id} value={t.id.toString()} className="text-xs">
+                                    {t.parentTemplateId ? "  └ " : ""}{t.name}
+                                  </SelectItem>
+                                ))}
+                            </SelectContent>
+                          </Select>
+                          <p className="text-xs text-muted-foreground">
+                            Set a parent to inherit its zone layout. Use "Cascade" to push layout changes down to children.
+                          </p>
+                        </div>
+
                         <div>
                           <Label className="text-xs">Description</Label>
                           <Textarea

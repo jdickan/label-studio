@@ -59,7 +59,7 @@ label-studio/
 
 Tables (all in `lib/db/src/schema/`):
 - `label_sheets` — OnlineLabels sheet templates with physical dimensions, corner radius, safe area/bleed. OL-only (no Avery). Measurements extracted from PDF vector paths.
-- `label_templates` — Label layout zone templates (JSONB zones with percentage-based positioning). Associated with a label sheet. Supports per-template safe area guides.
+- `label_templates` — Label layout zone templates (JSONB zones with percentage-based positioning). Associated with a label sheet. Supports per-template safe area guides. `parent_template_id` FK enables 3-level inheritance hierarchy (base type → size variant → product-specific).
 - `design_system` — Brand settings singleton (colors, fonts, logo URL, business info). One row, always `id = 1`.
 - `products` — Product catalog (4 types: soy_candle / room_spray / room_diffuser / other). Required fields: `name`, `scent_name`, `size`. Optional FK to `label_templates`.
 - `print_jobs` — Print job queue with JSONB items array `[{productId, quantity}]`, status lifecycle.
@@ -75,6 +75,7 @@ All routes prefixed with `/api`:
 - `POST /label-sheets/import` — Bulk-import extracted measurements to DB
 - `GET/POST /label-templates` — Label template CRUD
 - `GET/PATCH/DELETE /label-templates/:id`
+- `POST /label-templates/:id/cascade` — Cascade parent zone layout to all descendant templates (recursive; skips zones with `inheritedFromParent: false`)
 - `GET/PATCH /design-system` — Brand design system (singleton; GET seeds defaults if empty)
 - `GET/POST /products` — Product catalog (supports `?productType=` and `?search=` filters)
 - `GET/PATCH/DELETE /products/:id`
@@ -94,7 +95,7 @@ All routes prefixed with `/api`:
   - "Add Custom Sheet" — full form including corner radius and safe area/bleed section
   - "New" badge — shown on cards updated today; auto-expires at midnight
   - Sheet preview thumbnails — click to open full layout preview
-- `/label-templates` — Zone layout editor with JSON advanced mode. Safe area guides toggle (bleed + live area). Templates with safe area enabled show "SA" badge.
+- `/label-templates` — Zone layout editor with JSON advanced mode. Safe area guides toggle (bleed + live area). Templates with safe area enabled show "SA" badge. Template inheritance: parent selector in Label tab, cascade button pushes layout to child templates, inherited zones shown with chain-link badge, sidebar shows tree hierarchy.
 - `/print-jobs` — Create/manage print batches, visual sheet preview
 - `/brand-settings` — Design system editor. Features:
   - Colors (5 swatches with color picker + hex input)

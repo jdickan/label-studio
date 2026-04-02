@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, jsonb, timestamp, boolean, real } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, jsonb, timestamp, boolean, real, type AnyPgColumn } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { labelSheetsTable } from "./labelSheets";
@@ -14,6 +14,7 @@ export const labelTemplatesTable = pgTable("label_templates", {
   bleedInches: real("bleed_inches").notNull().default(0.125),
   safeAreaInches: real("safe_area_inches").notNull().default(0.125),
   labelBgColor: text("label_bg_color"),
+  parentTemplateId: integer("parent_template_id").references((): AnyPgColumn => labelTemplatesTable.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
