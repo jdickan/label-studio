@@ -5,8 +5,10 @@ import {
   useGetLabelSheets, 
   useGetProducts,
   useUpdatePrintJob,
+  useGetLabelTemplates,
   getGetPrintJobsQueryKey 
 } from "@workspace/api-client-react";
+import type { LabelZone } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { 
@@ -210,27 +212,114 @@ function BlankSlotEditor({
   );
 }
 
+const HEADING_ROLES_SET = new Set(["brand", "productName", "productType", "scentFamily"]);
+
+function isLightColor(hex: string): boolean {
+  if (!hex || hex === "transparent" || hex.length < 7) return true;
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return (r * 299 + g * 587 + b * 114) / 1000 > 128;
+}
+
+function resolveZoneText(zone: LabelZone, slot: GangedSlot): string {
+  if (slot.type !== "product") return zone.text || "";
+  switch (zone.role) {
+    case "productName": return slot.productName || zone.text || "";
+    case "brand":
+    case "scentName": return slot.productScentName || zone.text || "";
+    case "size": return slot.productSize || zone.text || "";
+    default: return zone.text || "";
+  }
+}
+
+function ZoneRenderer({
+  zones, bgColor, widthPx, heightPx, slot,
+}: {
+  zones: LabelZone[];
+  bgColor?: string | null;
+  widthPx: number;
+  heightPx: number;
+  slot: GangedSlot;
+}) {
+  const scale = heightPx / 260;
+  return (
+    <div style={{ position: "relative", width: widthPx, height: heightPx, background: bgColor || "#ffffff", overflow: "hidden", flexShrink: 0 }}>
+      {zones.map(zone => {
+        const isImageRole = zone.role === "image" || zone.role === "logo";
+        const isTransparent = !zone.color || zone.color === "transparent";
+        const bg = isTransparent ? "transparent" : (zone.color || "transparent");
+        const autoFg = isTransparent || isLightColor(zone.color || "") ? "#1a1a1a" : "#ffffff";
+        const fg = (zone as LabelZone & { textColor?: string }).textColor || autoFg;
+        const fontSize = Math.max(6, (zone.fontSize || 12) * scale);
+        const pxX = zone.x * widthPx;
+        const pxY = zone.y * heightPx;
+        const pxW = zone.w * widthPx;
+        const pxH = zone.h * heightPx;
+        const textAlignY = (zone as LabelZone & { textAlignY?: string }).textAlignY;
+        const alignItems = textAlignY === "bottom" ? "flex-end" : textAlignY === "middle" ? "center" : "flex-start";
+        const justifyContent = zone.textAlign === "center" ? "center" : zone.textAlign === "right" ? "flex-end" : "flex-start";
+        const text = resolveZoneText(zone, slot);
+        return (
+          <div
+            key={zone.id}
+            style={{
+              position: "absolute",
+              left: pxX, top: pxY, width: pxW, height: pxH,
+              background: bg, color: fg, fontSize,
+              fontWeight: HEADING_ROLES_SET.has(zone.role) ? 600 : 400,
+              textAlign: zone.textAlign || "left",
+              display: "flex", alignItems, justifyContent,
+              padding: Math.max(2, 4 * scale),
+              overflow: "hidden", boxSizing: "border-box",
+              transform: zone.rotation ? `rotate(${zone.rotation}deg)` : undefined,
+              transformOrigin: "center center",
+              lineHeight: 1.2,
+            }}
+          >
+            {isImageRole && zone.imageUrl ? (
+              <img src={zone.imageUrl} alt="" style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} />
+            ) : (
+              <span style={{ overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 4, WebkitBoxOrient: "vertical" }}>
+                {text}
+              </span>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function LabelCell({
   slot,
   sheet,
+  templateZones,
+  templateBgColor,
 }: {
   slot: GangedSlot;
   sheet: LabelSheetType;
+  templateZones?: LabelZone[] | null;
+  templateBgColor?: string | null;
 }) {
-  const shapeClass =
-    sheet.shape === "circle"
-      ? "rounded-full"
-      : sheet.shape === "oval"
-      ? "rounded-[50%]"
-      : "rounded-sm";
+  const DPI = 96;
+  const widthPx = sheet.labelWidth * DPI;
+  const heightPx = sheet.labelHeight * DPI;
+
+  const shapeStyle: React.CSSProperties = {
+    width: `${sheet.labelWidth}in`,
+    height: `${sheet.labelHeight}in`,
+    borderRadius: sheet.shape === "circle" || sheet.shape === "oval" ? "50%" : (sheet.cornerRadius ? `${sheet.cornerRadius}px` : undefined),
+    overflow: "hidden",
+    flexShrink: 0,
+  };
 
   if (slot.type === "blank" && slot.isIntentionalBlank) {
     return (
       <div
-        className={`border border-dashed border-orange-300 flex items-center justify-center overflow-hidden ${shapeClass}`}
+        className="border border-dashed border-orange-300 flex items-center justify-center"
         style={{
-          width: `${sheet.labelWidth}in`,
-          height: `${sheet.labelHeight}in`,
+          ...shapeStyle,
           background: "repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(251,146,60,0.1) 4px, rgba(251,146,60,0.1) 8px)",
         }}
       >
@@ -242,16 +331,30 @@ function LabelCell({
   if (slot.type === "blank") {
     return (
       <div
-        className={`border border-dashed border-gray-200 print:border-transparent overflow-hidden ${shapeClass}`}
-        style={{ width: `${sheet.labelWidth}in`, height: `${sheet.labelHeight}in` }}
+        className="border border-dashed border-gray-200 print:border-transparent"
+        style={shapeStyle}
       />
+    );
+  }
+
+  if (templateZones && templateZones.length > 0) {
+    return (
+      <div className="border border-gray-300 print:border-transparent" style={{ ...shapeStyle, position: "relative" }}>
+        <ZoneRenderer
+          zones={templateZones}
+          bgColor={templateBgColor}
+          widthPx={widthPx}
+          heightPx={heightPx}
+          slot={slot}
+        />
+      </div>
     );
   }
 
   return (
     <div
-      className={`border border-gray-300 print:border-transparent flex flex-col items-center justify-center p-1 text-center overflow-hidden ${shapeClass}`}
-      style={{ width: `${sheet.labelWidth}in`, height: `${sheet.labelHeight}in` }}
+      className="border border-gray-300 print:border-transparent flex flex-col items-center justify-center p-1 text-center"
+      style={shapeStyle}
     >
       <div style={{ fontKerning: "normal", textRendering: "optimizeLegibility" }}>
         <div className="font-bold text-[9pt] leading-tight mb-0.5">{slot.productName}</div>
@@ -265,6 +368,7 @@ function LabelCell({
 type FormData = {
   name: string;
   labelSheetId: string;
+  labelTemplateId: string;
   jobType: "standard" | "reprint";
   blankSlots: number[];
   notes: string;
@@ -275,6 +379,7 @@ export default function PrintJobs() {
   const { data: printJobs, isLoading } = useGetPrintJobs({ query: { queryKey: getGetPrintJobsQueryKey() } });
   const { data: sheets } = useGetLabelSheets({ query: { queryKey: ["labelSheets"] } });
   const { data: products } = useGetProducts({ query: { queryKey: ["products"] } });
+  const { data: templates } = useGetLabelTemplates({ query: { queryKey: ["labelTemplates"] } });
   
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
   const [editJobId, setEditJobId] = useState<number | null>(null);
@@ -283,6 +388,7 @@ export default function PrintJobs() {
   const [formData, setFormData] = useState<FormData>({
     name: "",
     labelSheetId: "",
+    labelTemplateId: "",
     jobType: "standard",
     blankSlots: [],
     notes: "",
@@ -350,6 +456,7 @@ export default function PrintJobs() {
     setFormData({
       name: `Print Job - ${format(new Date(), "MMM d")}`,
       labelSheetId: "",
+      labelTemplateId: "",
       jobType: "standard",
       blankSlots: [],
       notes: "",
@@ -363,6 +470,7 @@ export default function PrintJobs() {
     setFormData({
       name: job.name,
       labelSheetId: job.labelSheetId.toString(),
+      labelTemplateId: job.labelTemplateId ? job.labelTemplateId.toString() : "",
       jobType: (job.jobType as "standard" | "reprint") || "standard",
       blankSlots: (job.blankSlots as number[]) || [],
       notes: job.notes || "",
@@ -416,28 +524,31 @@ export default function PrintJobs() {
       toast({ title: "No usable label slots", description: "All positions are marked blank. Remove some blank slots to continue.", variant: "destructive" });
       return;
     }
+    const labelTemplateId = formData.labelTemplateId ? parseInt(formData.labelTemplateId) : null;
     if (editJobId !== null) {
       editMutation.mutate({
         id: editJobId,
         data: {
           name: formData.name,
           labelSheetId: parseInt(formData.labelSheetId),
+          labelTemplateId,
           jobType: formData.jobType,
           blankSlots: formData.blankSlots,
           items: validItems,
           notes: formData.notes || undefined,
-        }
+        } as any
       });
     } else {
       createMutation.mutate({
         data: {
           name: formData.name,
           labelSheetId: parseInt(formData.labelSheetId),
+          labelTemplateId,
           jobType: formData.jobType,
           blankSlots: formData.blankSlots,
           items: validItems,
           notes: formData.notes || undefined,
-        }
+        } as any
       });
     }
   };
@@ -673,6 +784,23 @@ export default function PrintJobs() {
                 </div>
               </div>
 
+              {/* Label Design */}
+              <div className="space-y-2">
+                <Label>Label Design</Label>
+                <Select value={formData.labelTemplateId} onValueChange={v => setFormData(p => ({ ...p, labelTemplateId: v }))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="No design — plain text fallback" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">No design (plain text)</SelectItem>
+                    {templates?.map(t => (
+                      <SelectItem key={t.id} value={t.id.toString()}>{t.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">Choose a label design to render in the print preview. Zone text is auto-filled from each product's data.</p>
+              </div>
+
               {/* Reprint toggle */}
               <div className="flex items-center gap-3 p-3 border rounded-md bg-secondary/20">
                 <Switch
@@ -836,7 +964,13 @@ export default function PrintJobs() {
                   }}
                 >
                   {sheetSlots.map((slot, i) => (
-                    <LabelCell key={i} slot={slot} sheet={activeSheetForPreview} />
+                    <LabelCell
+                      key={i}
+                      slot={slot}
+                      sheet={activeSheetForPreview}
+                      templateZones={previewJob?.templateZones as LabelZone[] | null}
+                      templateBgColor={previewJob?.templateBgColor}
+                    />
                   ))}
                 </div>
               </div>

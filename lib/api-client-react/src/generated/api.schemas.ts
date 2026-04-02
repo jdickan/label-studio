@@ -389,6 +389,9 @@ export interface PrintJob {
   notes?: string | null;
   createdAt: string;
   updatedAt: string;
+  labelTemplateId?: number | null;
+  templateZones?: LabelZone[] | null;
+  templateBgColor?: string | null;
 }
 
 export type CreatePrintJobBodyJobType =
@@ -402,6 +405,7 @@ export const CreatePrintJobBodyJobType = {
 export interface CreatePrintJobBody {
   name: string;
   labelSheetId: number;
+  labelTemplateId?: number | null;
   jobType?: CreatePrintJobBodyJobType;
   blankSlots?: number[];
   items: CreatePrintJobItemBody[];
@@ -428,6 +432,7 @@ export const UpdatePrintJobBodyStatus = {
 export interface UpdatePrintJobBody {
   name?: string;
   labelSheetId?: number;
+  labelTemplateId?: number | null;
   jobType?: UpdatePrintJobBodyJobType;
   blankSlots?: number[];
   items?: CreatePrintJobItemBody[];

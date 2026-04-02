@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
-import { db, printJobsTable, labelSheetsTable, productsTable } from "@workspace/db";
+import { db, printJobsTable, labelSheetsTable, productsTable, labelTemplatesTable } from "@workspace/db";
 import {
   CreatePrintJobBody,
   UpdatePrintJobBody,
@@ -36,6 +36,16 @@ async function buildPrintJobResponse(job: typeof printJobsTable.$inferSelect) {
   const usablePerSheet = labelsPerSheet - validBlanks;
   const totalSheets = usablePerSheet > 0 ? Math.ceil(totalLabels / usablePerSheet) : 0;
 
+  let templateZones: unknown[] | null = null;
+  let templateBgColor: string | null = null;
+  if (job.labelTemplateId) {
+    const [template] = await db.select().from(labelTemplatesTable).where(eq(labelTemplatesTable.id, job.labelTemplateId));
+    if (template) {
+      templateZones = Array.isArray(template.zones) ? template.zones : [];
+      templateBgColor = template.labelBgColor || null;
+    }
+  }
+
   return {
     id: job.id,
     name: job.name,
@@ -53,6 +63,9 @@ async function buildPrintJobResponse(job: typeof printJobsTable.$inferSelect) {
     notes: job.notes,
     createdAt: job.createdAt,
     updatedAt: job.updatedAt,
+    labelTemplateId: job.labelTemplateId ?? null,
+    templateZones,
+    templateBgColor,
   };
 }
 
@@ -70,9 +83,11 @@ router.get("/", async (req, res) => {
 router.post("/", async (req, res) => {
   try {
     const body = CreatePrintJobBody.parse(req.body);
+    const labelTemplateId = typeof req.body.labelTemplateId === "number" ? req.body.labelTemplateId : null;
     const [job] = await db.insert(printJobsTable).values({
       name: body.name,
       labelSheetId: body.labelSheetId,
+      labelTemplateId,
       items: body.items,
       jobType: body.jobType ?? "standard",
       blankSlots: body.blankSlots ?? [],
@@ -112,6 +127,9 @@ router.patch("/:id", async (req, res) => {
     if (body.blankSlots !== undefined) updateData.blankSlots = body.blankSlots;
     if (body.notes !== undefined) updateData.notes = body.notes;
     if (body.status !== undefined) updateData.status = body.status;
+    if ("labelTemplateId" in req.body) {
+      updateData.labelTemplateId = typeof req.body.labelTemplateId === "number" ? req.body.labelTemplateId : null;
+    }
     const [job] = await db.update(printJobsTable)
       .set(updateData)
       .where(eq(printJobsTable.id, id))
