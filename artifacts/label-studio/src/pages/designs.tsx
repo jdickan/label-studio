@@ -1082,6 +1082,18 @@ export default function Designs() {
   const zoomPct = Math.round(zoom * 100);
 
   useEffect(() => {
+    if (!activeDesignId || !activeDesign || isDirty) return;
+    const newObjs = (activeDesign.objects as DesignObj[]) ?? [];
+    const newSheetId = activeDesign.labelSheetId ? String(activeDesign.labelSheetId) : "none";
+    const objs = objects;
+    const currSheetId = selectedSheetId;
+    if (objs.length !== newObjs.length || newSheetId !== currSheetId) {
+      setObjects(newObjs);
+      setSelectedSheetId(newSheetId);
+    }
+  }, [activeDesignId, objects.length, selectedSheetId, isDirty]);
+
+  useEffect(() => {
     const title = activeDesign ? activeDesign.name : "Designs";
     const actions = (
       <div className="flex items-center gap-1.5">
@@ -1112,7 +1124,7 @@ export default function Designs() {
     );
     setTopBarState({ title, actions });
     return () => setTopBarState({});
-  }, [activeDesignId, isDirty, isSaving, selectedSheetId, sheets.length]);
+  }, [activeDesignId, activeDesign?.name, isDirty, isSaving, selectedSheetId]);
 
   return (
     <div className="flex h-full overflow-hidden">
