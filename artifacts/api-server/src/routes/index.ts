@@ -9,6 +9,7 @@ import printJobsRouter from "./printJobs";
 import dashboardRouter from "./dashboard";
 import pdfAnalysisRouter from "./pdfAnalysis";
 import labelAnalysisRouter from "./labelAnalysis";
+import magicUploadRouter from "./magicUpload";
 
 const router: IRouter = Router();
 
@@ -22,5 +23,6 @@ router.use("/design-system", designSystemRouter);
 router.use("/products", productsRouter);
 router.use("/print-jobs", printJobsRouter);
 router.use("/dashboard", dashboardRouter);
+router.use("/magic-upload", magicUploadRouter);
 
 export default router;
