@@ -160,6 +160,8 @@ export interface LabelZone {
   textColor?: string;
   /** Vertical text alignment within the zone (default: top) */
   textAlignY?: "top" | "middle" | "bottom";
+  /** Line height multiplier for wrapped text (default: 1.2) */
+  lineHeight?: number;
 }
 
 export type LabelZoneAnalysisResultBrandMatches = { [key: string]: string };

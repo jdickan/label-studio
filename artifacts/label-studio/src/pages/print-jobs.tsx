@@ -274,7 +274,7 @@ function ZoneRenderer({
               overflow: "hidden", boxSizing: "border-box",
               transform: zone.rotation ? `rotate(${zone.rotation}deg)` : undefined,
               transformOrigin: "center center",
-              lineHeight: 1.2,
+              lineHeight: zone.lineHeight ?? 1.2,
             }}
           >
             {isImageRole && zone.imageUrl ? (
@@ -663,6 +663,7 @@ export default function PrintJobs() {
           const isTransparent = !zone.color || zone.color === "transparent";
           const isImage = zone.role === "photo-area" || zone.role === "logo-area";
           const fontSize = fontSizeForZone(zone);
+          const lhMultiplier = zone.lineHeight ?? 1.2;
           const pad = Math.max(3, 6 * (DPI / 96));
           const fontWeight = HEADING_CANVAS.has(zone.role) ? "bold" : "normal";
           const autoFg = isTransparent || isLightColor(zone.color || "") ? "#1a1a1a" : "#ffffff";
@@ -686,7 +687,7 @@ export default function PrintJobs() {
                 ctx.textAlign = zone.textAlign || "left";
                 ctx.textBaseline = "top";
                 const lines = wrapText(text, zw - pad * 2, fontSize);
-                const lh = fontSize * 1.2;
+                const lh = fontSize * lhMultiplier;
                 const totalH = lines.length * lh;
                 const textAlignY = (zone as LabelZone & { textAlignY?: string }).textAlignY;
                 let sy = -zh / 2 + pad;
@@ -712,7 +713,7 @@ export default function PrintJobs() {
                 ctx.textAlign = zone.textAlign || "left";
                 ctx.textBaseline = "top";
                 const lines = wrapText(text, zw - pad * 2, fontSize);
-                const lh = fontSize * 1.2;
+                const lh = fontSize * lhMultiplier;
                 const totalH = lines.length * lh;
                 const textAlignY = (zone as LabelZone & { textAlignY?: string }).textAlignY;
                 let sy = zy + pad;

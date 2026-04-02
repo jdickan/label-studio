@@ -730,6 +730,16 @@ function ZonePanel({ zone, onChange, onDelete, brandFields, designSystem }: Zone
               className="py-1"
             />
           </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs">Line height — {(zone.lineHeight ?? 1.2).toFixed(1)}×</Label>
+            <Slider
+              min={0.8} max={2.5} step={0.1}
+              value={[zone.lineHeight ?? 1.2]}
+              onValueChange={([v]) => update({ lineHeight: v })}
+              className="py-1"
+            />
+          </div>
         </>
       )}
 
