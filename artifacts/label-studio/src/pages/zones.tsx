@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useShell } from "@/context/shell-context";
+import PageWrapper from "@/components/layout/page-wrapper";
 import {
   useGetLabelTemplates,
   useGetLabelSheets,
@@ -30,7 +31,7 @@ import {
   Circle, Loader2, ChevronDown, ChevronUp, AlertCircle, X,
   AlignLeft, AlignCenter, AlignRight, ImagePlus, Columns2,
   Eye, RotateCcw, AlignStartVertical, AlignCenterVertical, AlignEndVertical,
-  Bookmark, BookmarkCheck, Sparkles, ChevronRight, Link2, Unlink, GitBranch,
+  Bookmark, BookmarkCheck, Sparkles, ChevronRight, ChevronLeft, Link2, Unlink, GitBranch,
 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
@@ -1081,6 +1082,7 @@ export default function Zones() {
     }
   });
 
+  const [landingMode, setLandingMode] = useState(true);
   const [mode, setMode] = useState<EditorMode>("idle");
   const [activeTemplateId, setActiveTemplateId] = useState<number | null>(null);
   const [parentTemplateId, setParentTemplateId] = useState<number | null>(null);
@@ -1183,7 +1185,18 @@ export default function Zones() {
     if (selectedZoneId) setRightPanelTab("zone");
   }, [selectedZoneId]);
 
+  const exitToLanding = () => {
+    setLandingMode(true);
+    setMode("idle");
+    setActiveTemplateId(null);
+    setZones([]);
+    setSelectedZoneId(null);
+    setImageUrl(undefined);
+    undoRef.current = null;
+  };
+
   const loadTemplate = (t: LabelTemplate) => {
+    setLandingMode(false);
     setMode("editing");
     setActiveTemplateId(t.id);
     setParentTemplateId(t.parentTemplateId ?? null);
@@ -1207,6 +1220,7 @@ export default function Zones() {
   };
 
   const startNewBlank = () => {
+    setLandingMode(false);
     setMode("creating");
     setActiveTemplateId(null);
     setParentTemplateId(null);
@@ -1358,74 +1372,167 @@ export default function Zones() {
   }, [activeTemplateId, toast, queryClient]);
 
   useEffect(() => {
-    setTopBarState({
-      actions: (
-        <div className="flex items-center gap-1.5">
-          {isEditing && (
-            <>
-              <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setShowPreview(true)}>
-                <Eye className="w-3.5 h-3.5 mr-1" /> Preview
-              </Button>
-              <Button
-                variant="outline" size="sm" className="h-7 text-xs"
-                onClick={handleSaveAsDefault}
-                disabled={zones.length === 0}
-                title="Save the current zone layout as your default — apply it to any new template"
-              >
-                {hasMyDefault ? <BookmarkCheck className="w-3.5 h-3.5 mr-1" /> : <Bookmark className="w-3.5 h-3.5 mr-1" />}
-                Save as Default
-              </Button>
-              <Button variant="outline" size="sm" className="h-7 text-xs" onClick={handleAddZone}>
-                <Plus className="w-3.5 h-3.5 mr-1" /> Add Zone
-              </Button>
-            </>
-          )}
-          <Button size="sm" className="h-7 text-xs" onClick={handleSave} disabled={isSaving || !isEditing}>
-            <Save className="w-3.5 h-3.5 mr-1" />
-            {activeTemplateId ? "Save Changes" : "Save Template"}
-          </Button>
-          {activeTemplateId && (
+    const actions = landingMode ? (
+      <div className="flex items-center gap-1.5">
+        <Button size="sm" className="h-7 text-xs" onClick={() => { setLandingMode(false); setMode("idle"); }}>
+          <Plus className="w-3.5 h-3.5 mr-1" /> New Template
+        </Button>
+      </div>
+    ) : (
+      <div className="flex items-center gap-1.5">
+        <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={exitToLanding}>
+          <ChevronLeft className="w-3.5 h-3.5 mr-1" /> All Templates
+        </Button>
+        <div className="w-px h-5 bg-border mx-0.5" />
+        {isEditing && (
+          <>
+            <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setShowPreview(true)}>
+              <Eye className="w-3.5 h-3.5 mr-1" /> Preview
+            </Button>
             <Button
               variant="outline" size="sm" className="h-7 text-xs"
-              onClick={handleCascade}
-              disabled={cascading}
-              title="Push this template's zone layout down to all child templates"
+              onClick={handleSaveAsDefault}
+              disabled={zones.length === 0}
+              title="Save the current zone layout as your default — apply it to any new template"
             >
-              {cascading ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <GitBranch className="w-3.5 h-3.5 mr-1" />}
-              Cascade
+              {hasMyDefault ? <BookmarkCheck className="w-3.5 h-3.5 mr-1" /> : <Bookmark className="w-3.5 h-3.5 mr-1" />}
+              Save as Default
             </Button>
+            <Button variant="outline" size="sm" className="h-7 text-xs" onClick={handleAddZone}>
+              <Plus className="w-3.5 h-3.5 mr-1" /> Add Zone
+            </Button>
+          </>
+        )}
+        <Button size="sm" className="h-7 text-xs" onClick={handleSave} disabled={isSaving || !isEditing}>
+          <Save className="w-3.5 h-3.5 mr-1" />
+          {activeTemplateId ? "Save Changes" : "Save Template"}
+        </Button>
+        {activeTemplateId && (
+          <Button
+            variant="outline" size="sm" className="h-7 text-xs"
+            onClick={handleCascade}
+            disabled={cascading}
+            title="Push this template's zone layout down to all child templates"
+          >
+            {cascading ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <GitBranch className="w-3.5 h-3.5 mr-1" />}
+            Cascade
+          </Button>
+        )}
+      </div>
+    );
+    const title = landingMode ? "Zones" : (activeTemplateId ? templateName : "New Template");
+    setTopBarState({ title, actions });
+    return () => setTopBarState({});
+  }, [landingMode, isEditing, zones.length, isSaving, activeTemplateId, cascading, hasMyDefault, templateName]);
+
+  // ── Landing view (tile grid) ──────────────────────────────────────────────
+  if (landingMode) {
+    return (
+      <PageWrapper>
+        <div className="space-y-6 animate-in fade-in duration-500">
+          {isLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[1,2,3].map(i => <div key={i} className="h-48 rounded-lg border border-muted bg-card animate-pulse" />)}
+            </div>
+          ) : !templates?.length ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 max-w-2xl mx-auto mt-12">
+              <button
+                type="button"
+                onClick={() => { setLandingMode(false); startNewBlank(); }}
+                className="flex flex-col items-center gap-4 rounded-xl border-2 border-dashed border-muted-foreground/30 p-8 text-center hover:border-primary hover:bg-muted/30 transition-all group"
+              >
+                <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                  <LayoutTemplate className="w-7 h-7 text-primary" />
+                </div>
+                <div>
+                  <p className="font-semibold text-base">Design from scratch</p>
+                  <p className="text-sm text-muted-foreground mt-1">Start with a blank canvas and build your zone layout</p>
+                </div>
+              </button>
+              <div
+                className="flex flex-col items-center gap-4 rounded-xl border-2 border-dashed border-muted-foreground/30 p-8 text-center cursor-pointer hover:border-primary hover:bg-muted/30 transition-all group"
+                onClick={() => { setLandingMode(false); setMode("idle"); }}
+              >
+                <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center group-hover:bg-primary/10 transition-colors">
+                  <Upload className="w-7 h-7 text-muted-foreground group-hover:text-primary transition-colors" />
+                </div>
+                <div>
+                  <p className="font-semibold text-base">Upload Design</p>
+                  <p className="text-sm text-muted-foreground mt-1">AI-analyze an existing label image to create zones</p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {templates.map((template) => {
+                const zoneArr = Array.isArray(template.zones) ? template.zones as LabelZone[] : [];
+                const parentTemplate = templates.find(t => t.id === template.parentTemplateId);
+                const linkedSheet = sheets?.find(s => s.id === template.labelSheetId);
+                return (
+                  <div
+                    key={template.id}
+                    onClick={() => loadTemplate(template)}
+                    className="group cursor-pointer rounded-lg border border-muted bg-card hover:border-primary hover:shadow-md transition-all overflow-hidden flex flex-col"
+                  >
+                    <div className="bg-secondary/40 p-5 flex-1 flex flex-col gap-3">
+                      <div className="flex items-start gap-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            {template.parentTemplateId && (
+                              <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                                Child
+                              </span>
+                            )}
+                          </div>
+                          <h3 className="font-semibold text-base truncate">{template.name}</h3>
+                          {parentTemplate && (
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              Inherits from: {parentTemplate.name}
+                            </p>
+                          )}
+                        </div>
+                        <div className="w-10 h-14 flex-shrink-0 bg-white border rounded shadow-sm flex items-center justify-center">
+                          <LayoutTemplate className="w-4 h-4 text-muted-foreground/40" />
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                        <span>{zoneArr.length} {zoneArr.length === 1 ? "zone" : "zones"}</span>
+                        {linkedSheet && <span>· {linkedSheet.name}</span>}
+                      </div>
+                    </div>
+                    <div className="px-5 py-3 border-t bg-card flex items-center justify-between gap-2">
+                      <span className="text-xs text-muted-foreground">Click to edit</span>
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-6 text-xs px-2 text-destructive hover:text-destructive"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (confirm(`Delete "${template.name}"?`)) {
+                              deleteMutation.mutate({ id: template.id });
+                            }
+                          }}
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           )}
         </div>
-      ),
-    });
-    return () => setTopBarState({});
-  }, [isEditing, zones.length, isSaving, activeTemplateId, cascading, hasMyDefault]);
+      </PageWrapper>
+    );
+  }
 
+  // ── Editing view (no sidebar) ──────────────────────────────────────────────
   return (
     <div className="flex flex-col h-full animate-in fade-in duration-500">
-
-      <div className="flex flex-1 gap-4 min-h-0">
-        {/* Sidebar */}
-        <div className="w-56 shrink-0 flex flex-col gap-2 overflow-y-auto">
-
-          {isLoading ? (
-            <div className="text-center text-xs text-muted-foreground p-4 animate-pulse">Loading…</div>
-          ) : templates?.length === 0 ? (
-            <div className="text-center text-xs text-muted-foreground p-4">No templates yet</div>
-          ) : (() => {
-            const tpls = templates ?? [];
-            const childrenOf = (pid: number | null) => tpls.filter(t => (t.parentTemplateId ?? null) === pid);
-            const renderTree = (parentId: number | null, depth: number): JSX.Element[] =>
-              childrenOf(parentId).flatMap(t => [
-                <TemplateCard key={t.id} template={t} active={activeTemplateId === t.id} onClick={() => loadTemplate(t)} depth={depth} />,
-                ...renderTree(t.id, depth + 1),
-              ]);
-            return renderTree(null, 0);
-          })()}
-        </div>
-
         {/* Main content area */}
-        <div className="flex-1 min-h-0 flex flex-col overflow-hidden rounded-lg border bg-card">
+        <div className="flex-1 min-h-0 flex flex-col overflow-hidden bg-card">
           {mode === "idle" && (
             <div className="flex-1 flex items-center justify-center p-8">
               <div className="w-full max-w-2xl grid grid-cols-2 gap-5">
@@ -1858,7 +1965,6 @@ export default function Zones() {
             </div>
           )}
         </div>
-      </div>
 
       {/* ── Label Preview Modal ─────────────────────────────────────────── */}
       <Dialog open={showPreview} onOpenChange={setShowPreview}>

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useShell } from "@/context/shell-context";
+import PageWrapper from "@/components/layout/page-wrapper";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useGetLabelDesigns,
@@ -40,6 +41,7 @@ import {
   List,
   ChevronDown,
   ChevronUp,
+  ChevronLeft,
   Save,
   Sparkles,
 } from "lucide-react";
@@ -1093,6 +1095,11 @@ export default function Designs() {
     const title = editingMode && activeDesign ? activeDesign.name : "Designs";
     const actions = editingMode ? (
       <div className="flex items-center gap-1.5">
+        <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={exitEditingMode}>
+          <ChevronLeft className="w-3.5 h-3.5 mr-1" />
+          All Designs
+        </Button>
+        <div className="w-px h-5 bg-border mx-0.5" />
         {activeDesignId && (
           <Select value={selectedSheetId} onValueChange={handleSheetChange}>
             <SelectTrigger className="h-7 text-xs w-40">
@@ -1123,134 +1130,193 @@ export default function Designs() {
     return () => setTopBarState({});
   }, [editingMode, activeDesignId, activeDesign?.name, isDirty, isSaving, selectedSheetId]);
 
-  return (
-    <div className="flex h-full overflow-hidden">
-      {/* Left panel — docked to left edge */}
-      <div className="w-52 flex-shrink-0 border-r bg-card flex flex-col overflow-y-auto">
+  // ── Landing view (tile grid) ──────────────────────────────────────────────
+  if (!editingMode) {
+    return (
+      <PageWrapper>
+        <div className="space-y-6 animate-in fade-in duration-500">
           {isLoading ? (
-            <p className="text-xs text-muted-foreground text-center py-4 animate-pulse">Loading…</p>
-          ) : (
-            <DesignListPanel
-              designs={allDesigns}
-              activeId={activeDesignId}
-              onSelect={loadDesign}
-              onCreate={handleCreate}
-              onRename={handleRename}
-              onDelete={handleDelete}
-            />
-          )}
-
-          {activeDesignId && (
-            <ToolPanel
-              activeTab={activeTab}
-              onTab={setActiveTab}
-              onAddText={() => addObj(makeText(undefined, designSystem), true)}
-              onAddRect={() => addObj(makeRect())}
-              onAddEllipse={() => addObj(makeEllipse())}
-              sheets={sheets}
-              selectedSheetId={selectedSheetId}
-              onSheetChange={handleSheetChange}
-            />
-          )}
-        </div>
-
-        {/* Center canvas area — fills remaining space, edge-to-edge */}
-        <div className="flex-1 min-w-0 flex flex-col overflow-hidden bg-card">
-          {!activeDesignId ? (
-            <div className="flex-1 flex items-center justify-center">
-              <div className="text-center flex flex-col items-center gap-4 max-w-xs">
-                <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
-                  <Sparkles className="w-8 h-8 text-muted-foreground" />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[1,2,3].map(i => <div key={i} className="h-48 rounded-lg border border-muted bg-card animate-pulse" />)}
+            </div>
+          ) : allDesigns.length === 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 max-w-2xl mx-auto mt-12">
+              <button
+                type="button"
+                onClick={handleCreate}
+                className="flex flex-col items-center gap-4 rounded-xl border-2 border-dashed border-muted-foreground/30 p-8 text-center hover:border-primary hover:bg-muted/30 transition-all group"
+              >
+                <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                  <Plus className="w-7 h-7 text-primary" />
                 </div>
                 <div>
-                  <p className="font-semibold text-lg">No design selected</p>
-                  <p className="text-sm text-muted-foreground mt-1">Create a new design or select one from the sidebar to start designing.</p>
+                  <p className="font-semibold text-base">New Design</p>
+                  <p className="text-sm text-muted-foreground mt-1">Start from a blank canvas</p>
                 </div>
-                <Button onClick={handleCreate} size="sm">
-                  <Plus className="w-4 h-4 mr-1" /> New Design
-                </Button>
+              </button>
+              <div className="flex flex-col items-center gap-4 rounded-xl border-2 border-dashed border-muted-foreground/30 p-8 text-center opacity-50 cursor-not-allowed">
+                <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center">
+                  <Sparkles className="w-7 h-7 text-muted-foreground" />
+                </div>
+                <div>
+                  <p className="font-semibold text-base">From Template</p>
+                  <p className="text-sm text-muted-foreground mt-1">Coming soon</p>
+                </div>
               </div>
             </div>
           ) : (
-            <>
-              {/* Top toolbar */}
-              <TopToolbar obj={selectedObj} onUpdate={updateObj} extraFonts={extraFonts} />
-
-              {/* Canvas scroll area */}
-              <div className="flex-1 overflow-auto bg-[#f0f0f0]">
-                <div className="flex items-center justify-center" style={{ minWidth: "100%", minHeight: "100%", padding: 40 }}>
-                  <DesignCanvas
-                    objects={objects}
-                    selectedId={selectedId}
-                    zoom={zoom}
-                    labelW={labelW}
-                    labelH={labelH}
-                    bleedInches={bleedInches}
-                    safeInches={safeInches}
-                    labelShape={(activeSheet?.shape ?? "rectangle") as "rectangle" | "circle" | "oval"}
-                    cornerRadius={activeSheet?.cornerRadius ?? 0}
-                    onSelect={setSelectedId}
-                    onUpdateObj={updateObj}
-                    onStartEdit={setEditingId}
-                    editingId={editingId}
-                  />
-                </div>
-              </div>
-
-              {/* Status bar */}
-              <div className="h-8 border-t bg-card flex items-center px-3 gap-2 text-xs text-muted-foreground shrink-0">
-                {selectedObj ? (
-                  <>
-                    {(["x","y","w","h"] as const).map((field) => (
-                      <label key={field} className="flex items-center gap-1">
-                        <span className="uppercase">{field}:</span>
-                        <input
-                          type="number"
-                          step="0.001"
-                          min={field === "w" || field === "h" ? MIN_SIZE : undefined}
-                          value={fmt3(selectedObj[field])}
-                          onChange={(e) => {
-                            const v = parseFloat(e.target.value);
-                            if (!isNaN(v)) {
-                              const min = field === "w" || field === "h" ? MIN_SIZE : -99;
-                              updateObj(selectedObj.id, { [field]: Math.max(min, v) } as Partial<DesignObj>);
-                            }
-                          }}
-                          className="w-14 text-foreground font-medium bg-transparent border-b border-muted-foreground/40 focus:outline-none focus:border-primary text-xs py-0 text-center"
-                        />
-                        <span>″</span>
-                      </label>
-                    ))}
-                  </>
-                ) : (
-                  <span>{labelW}″ × {labelH}″ label</span>
-                )}
-                <div className="ml-auto flex items-center gap-1">
-                  <button type="button" onClick={() => setZoom((z) => Math.max(0.25, z - 0.25))} className="p-1 rounded hover:bg-muted transition-colors"><ZoomOut className="w-3.5 h-3.5" /></button>
-                  <span className="w-10 text-center">{zoomPct}%</span>
-                  <button type="button" onClick={() => setZoom((z) => Math.min(4, z + 0.25))} className="p-1 rounded hover:bg-muted transition-colors"><ZoomIn className="w-3.5 h-3.5" /></button>
-                </div>
-              </div>
-            </>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {allDesigns.map((design) => {
+                const objCount = (design.objects as DesignObj[])?.length ?? 0;
+                const linkedSheet = sheets.find(s => s.id === design.labelSheetId);
+                return (
+                  <div
+                    key={design.id}
+                    onClick={() => loadDesign(design)}
+                    className="group cursor-pointer rounded-lg border border-muted bg-card hover:border-primary hover:shadow-md transition-all overflow-hidden flex flex-col"
+                  >
+                    {/* Card preview area */}
+                    <div className="bg-secondary/40 p-5 flex-1 flex flex-col gap-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <h3 className="font-semibold text-base truncate">{design.name}</h3>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {objCount} {objCount === 1 ? "object" : "objects"}
+                            {linkedSheet ? ` · ${linkedSheet.name}` : ""}
+                          </p>
+                        </div>
+                        <div className="w-10 h-14 flex-shrink-0 bg-white border rounded shadow-sm flex items-center justify-center">
+                          <Sparkles className="w-4 h-4 text-muted-foreground/40" />
+                        </div>
+                      </div>
+                    </div>
+                    {/* Card footer */}
+                    <div className="px-5 py-3 border-t bg-card flex items-center justify-between gap-2">
+                      <span className="text-xs text-muted-foreground">Click to edit</span>
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-6 text-xs px-2"
+                          onClick={(e) => { e.stopPropagation(); handleRename(design.id, prompt("Rename design:", design.name) ?? design.name); }}
+                        >
+                          <Pencil className="w-3 h-3" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-6 text-xs px-2 text-destructive hover:text-destructive"
+                          onClick={(e) => { e.stopPropagation(); handleDelete(design.id); }}
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           )}
         </div>
+      </PageWrapper>
+    );
+  }
 
-        {/* Right panel — docked to right edge */}
-        <div className="w-52 flex-shrink-0 border-l bg-card flex flex-col overflow-y-auto">
-          {selectedObj && (
-            <PropertiesPanel obj={selectedObj} onUpdate={updateObj} extraFonts={extraFonts} />
-          )}
-          {activeDesignId && (
-            <ObjectListPanel
+  // ── Editing view ──────────────────────────────────────────────────────────
+  return (
+    <div className="flex h-full overflow-hidden">
+      {/* Left panel — tools */}
+      <div className="w-44 flex-shrink-0 border-r bg-card flex flex-col overflow-y-auto p-2 gap-2">
+        <ToolPanel
+          activeTab={activeTab}
+          onTab={setActiveTab}
+          onAddText={() => addObj(makeText(undefined, designSystem), true)}
+          onAddRect={() => addObj(makeRect())}
+          onAddEllipse={() => addObj(makeEllipse())}
+          sheets={sheets}
+          selectedSheetId={selectedSheetId}
+          onSheetChange={handleSheetChange}
+        />
+      </div>
+
+      {/* Center canvas area */}
+      <div className="flex-1 min-w-0 flex flex-col overflow-hidden bg-card">
+        {/* Top toolbar */}
+        <TopToolbar obj={selectedObj} onUpdate={updateObj} extraFonts={extraFonts} />
+
+        {/* Canvas scroll area */}
+        <div className="flex-1 overflow-auto bg-[#f0f0f0]">
+          <div className="flex items-center justify-center" style={{ minWidth: "100%", minHeight: "100%", padding: 40 }}>
+            <DesignCanvas
               objects={objects}
               selectedId={selectedId}
+              zoom={zoom}
+              labelW={labelW}
+              labelH={labelH}
+              bleedInches={bleedInches}
+              safeInches={safeInches}
+              labelShape={(activeSheet?.shape ?? "rectangle") as "rectangle" | "circle" | "oval"}
+              cornerRadius={activeSheet?.cornerRadius ?? 0}
               onSelect={setSelectedId}
-              onToggleVis={(id) => updateObj(id, { visible: !objects.find((o) => o.id === id)?.visible } as Partial<DesignObj>)}
-              onToggleLock={(id) => updateObj(id, { locked: !objects.find((o) => o.id === id)?.locked } as Partial<DesignObj>)}
-              onDelete={deleteObj}
+              onUpdateObj={updateObj}
+              onStartEdit={setEditingId}
+              editingId={editingId}
             />
-          )}
+          </div>
         </div>
+
+        {/* Status bar */}
+        <div className="h-8 border-t bg-card flex items-center px-3 gap-2 text-xs text-muted-foreground shrink-0">
+          {selectedObj ? (
+            <>
+              {(["x","y","w","h"] as const).map((field) => (
+                <label key={field} className="flex items-center gap-1">
+                  <span className="uppercase">{field}:</span>
+                  <input
+                    type="number"
+                    step="0.001"
+                    min={field === "w" || field === "h" ? MIN_SIZE : undefined}
+                    value={fmt3(selectedObj[field])}
+                    onChange={(e) => {
+                      const v = parseFloat(e.target.value);
+                      if (!isNaN(v)) {
+                        const min = field === "w" || field === "h" ? MIN_SIZE : -99;
+                        updateObj(selectedObj.id, { [field]: Math.max(min, v) } as Partial<DesignObj>);
+                      }
+                    }}
+                    className="w-14 text-foreground font-medium bg-transparent border-b border-muted-foreground/40 focus:outline-none focus:border-primary text-xs py-0 text-center"
+                  />
+                  <span>″</span>
+                </label>
+              ))}
+            </>
+          ) : (
+            <span>{labelW}″ × {labelH}″ label</span>
+          )}
+          <div className="ml-auto flex items-center gap-1">
+            <button type="button" onClick={() => setZoom((z) => Math.max(0.25, z - 0.25))} className="p-1 rounded hover:bg-muted transition-colors"><ZoomOut className="w-3.5 h-3.5" /></button>
+            <span className="w-10 text-center">{zoomPct}%</span>
+            <button type="button" onClick={() => setZoom((z) => Math.min(4, z + 0.25))} className="p-1 rounded hover:bg-muted transition-colors"><ZoomIn className="w-3.5 h-3.5" /></button>
+          </div>
+        </div>
+      </div>
+
+      {/* Right panel */}
+      <div className="w-52 flex-shrink-0 border-l bg-card flex flex-col overflow-y-auto">
+        {selectedObj && (
+          <PropertiesPanel obj={selectedObj} onUpdate={updateObj} extraFonts={extraFonts} />
+        )}
+        {activeDesignId && (
+          <ObjectListPanel
+            objects={objects}
+            selectedId={selectedId}
+            onSelect={setSelectedId}
+            onToggleVis={(id) => updateObj(id, { visible: !objects.find((o) => o.id === id)?.visible } as Partial<DesignObj>)}
+            onToggleLock={(id) => updateObj(id, { locked: !objects.find((o) => o.id === id)?.locked } as Partial<DesignObj>)}
+            onDelete={deleteObj}
+          />
+        )}
+      </div>
     </div>
   );
 }

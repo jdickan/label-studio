@@ -170,8 +170,8 @@ Every package extends `tsconfig.base.json`. Three library packages (`lib/db`, `l
 - **ShellContext** (`src/context/shell-context.tsx`): pages inject `{ title, actions }` into the topbar via `useShell()` + `useEffect`. Shell reads `topBarState` to render the title and right-side action slot.
 - **Shell main**: `overflow-hidden` — no padding; pages manage their own layout.
 - **PageWrapper** (`src/components/layout/page-wrapper.tsx`): standard scrollable padded layout for all regular pages (Dashboard, Products, Sheets, Print Jobs, Branding). Use `<PageWrapper>` as the root return element.
-- **Designs page**: full-bleed editor layout — left panel (`w-52 border-r overflow-y-auto`) and right panel (`w-52 border-l overflow-y-auto`) dock flush to edges; canvas fills center. Save button + sheet selector injected into topbar via ShellContext. Empty state replaces always-on header.
-- **Zones page**: full-bleed split panel (`h-full`), with a compact action bar at top (border-b, px-4 py-2). Uses `h-full`, not `h-[calc(100vh-Npx)]`.
+- **Designs page**: Landing view (tile grid, like Sheets) → click tile → editor. `editingMode` boolean state gates the two renders. Landing: `<PageWrapper>` with card tiles, empty state shows two dashed boxes. Editor: full-bleed with left tool panel (`w-44`), center canvas, right properties panel. Topbar: landing shows "New Design"; editor shows "← All Designs" + sheet selector + Save.
+- **Zones page**: Landing view (tile grid) → click tile → editor. `landingMode` boolean state gates the two renders. Landing: `<PageWrapper>` with card tiles showing zone count, parent info, linked sheet. Editor: full-bleed editor without sidebar; `mode` "idle"/"creating"/"editing"/"uploading" controls editor sub-state. Topbar: landing shows "New Template"; editor shows "← All Templates" + existing editing buttons.
 
 ## Important Conventions
 
